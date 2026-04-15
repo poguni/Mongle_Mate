@@ -8,426 +8,526 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#FFF9E0;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#FFF9E0}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 .bounce{animation:bounce 2.2s infinite}
-.mb{transition:transform .14s,box-shadow .14s;cursor:pointer;}
-.mb:hover{transform:scale(1.04);box-shadow:0 8px 28px rgba(66,54,48,.14)!important;}
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center;}
-input,textarea,select{font-family:inherit;outline:none;}
-input:focus,textarea:focus{box-shadow:0 0 0 2px #FEE500;}
+.mb{transition:transform .14s,box-shadow .14s;cursor:pointer}
+.mb:hover{transform:scale(1.04);box-shadow:0 8px 28px rgba(66,54,48,.14)!important}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center}
+input,textarea,select{font-family:inherit;outline:none}
+input:focus,textarea:focus{box-shadow:0 0 0 2px #FEE500}
 @media print{.np{display:none!important}body{background:white!important}}
-.dh:hover{transform:scale(1.03);transition:transform .12s;}
-.tb{border:none;background:none;cursor:pointer;padding:6px 10px;border-radius:14px;font-size:11px;font-weight:600;transition:all .12s;}
-.tb.a{background:#FEE500;color:#423630;}
-.tb:not(.a){color:#999;}
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-thumb{background:#e0d4b8;border-radius:4px;}
+.dh:hover{transform:scale(1.03);transition:transform .12s}
+.tb{border:none;background:none;cursor:pointer;padding:6px 10px;border-radius:14px;font-size:11px;font-weight:600;transition:all .12s}
+.tb.a{background:#FEE500;color:#423630}
+.tb:not(.a){color:#999}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:#e0d4b8;border-radius:4px}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState,useRef,useEffect,useCallback}=React;
-const Y="#FEE500",BG="#FFF9E0",BR="#423630",CR="#FFF3C4";
-const B_BOY="rgba(173,216,250,0.6)",B_GIRL="rgba(255,182,193,0.6)";
+const {useState, useRef, useEffect} = React;
+
+const Y="#FEE500", BG="#FFF9E0", BR="#423630", CR="#FFF3C4";
+const B_BOY="rgba(173,216,250,0.6)", B_GIRL="rgba(255,182,193,0.6)";
 const AV_B=["🐯","🐻","🐼","🦊","🐨","🐸","🐧","🐺","🦁","🐮","🐡","🦘","🦔","🐊","🦝"];
 const AV_G=["🦄","🐝","🦋","🐙","🦀","🐬","🦉","🦚","🦩","🦜","🌸","🌺","🌻","🍀","🌈"];
+
 const MODES=[
-  {id:"random",emoji:"🎲",label:"랜덤 자리 바꾸기",desc:"무작위로 좌석을 배치해요",color:"#FFE066"},
-  {id:"number",emoji:"📋",label:"번호 순으로 앉기",desc:"출석 번호 순서로 배치해요",color:"#B5EAD7"},
-  {id:"friend",emoji:"💕",label:"짝이 되고 싶은 친구랑 앉기",desc:"원하는 짝꿍을 지정해요",color:"#FFDDE1"},
-  {id:"ladder",emoji:"🪜",label:"사다리 타기",desc:"사다리로 공정하게 정해요",color:"#C7CEEA"},
-  {id:"teacher",emoji:"🎓",label:"선생님께서 지정하기",desc:"선생님이 직접 배치해요",color:"#FFF3C4"},
+  {id:"random", emoji:"🎲", label:"랜덤 자리 바꾸기",              desc:"무작위로 좌석을 배치해요",        color:"#FFE066"},
+  {id:"number", emoji:"📋", label:"번호 순으로 앉기",                desc:"출석 번호 순서로 배치해요",       color:"#B5EAD7"},
+  {id:"friend", emoji:"💕", label:"짝이 되고 싶은 친구랑 앉기",     desc:"원하는 짝꿍을 지정해요",          color:"#FFDDE1"},
+  {id:"group",  emoji:"🏫", label:"짝이 되고 싶은 친구랑 모둠으로 앉기", desc:"선호 친구와 같은 모둠으로 배치해요", color:"#D5F5E3"},
+  {id:"ladder", emoji:"🪜", label:"사다리 타기",                     desc:"사다리로 공정하게 정해요",        color:"#C7CEEA"},
+  {id:"teacher",emoji:"🎓", label:"선생님께서 지정하기",             desc:"선생님이 직접 배치해요",           color:"#FFF3C4"},
 ];
 
-function makeSeats(r,c){return Array.from({length:r*c},(_,i)=>({id:i,studentId:null,locked:false,hasDesk:true}));}
-function loadLS(k,d){try{const v=localStorage.getItem(k);const p=v?JSON.parse(v):d;return(Array.isArray(p)||(typeof p==="object"&&p!==null))?p:d;}catch{return d;}}
+const GROUP_DEF=[
+  {id:1,size:4,boys:2,girls:2,row:0},
+  {id:2,size:3,boys:1,girls:2,row:0},
+  {id:3,size:4,boys:2,girls:2,row:0},
+  {id:4,size:4,boys:2,girls:2,row:1},
+  {id:5,size:3,boys:2,girls:1,row:1},
+  {id:6,size:4,boys:2,girls:2,row:1},
+];
+const GROUP_COLORS=["#FFE066","#B5EAD7","#FFDDE1","#C7CEEA","#D5F5E3","#FFF3C4"];
+
+// ── helpers ──────────────────────────────────────────────────────────
+function makeSeats(r,c){
+  return Array.from({length:r*c},(_,i)=>({id:i,studentId:null,locked:false,hasDesk:true}));
+}
+function loadLS(k,d){
+  try{const v=localStorage.getItem(k);const p=v?JSON.parse(v):d;return(Array.isArray(p)||(typeof p==="object"&&p!==null))?p:d;}catch{return d;}
+}
 function saveLS(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
-function getNbrs(idx,cols,rows){const r=Math.floor(idx/cols),c=idx%cols,ns=[];if(r>0)ns.push(idx-cols);if(r<rows-1)ns.push(idx+cols);if(c>0)ns.push(idx-1);if(c<cols-1)ns.push(idx+1);return ns;}
-function seatBg(st,locked){if(locked)return CR;if(!st)return"white";return st.gender==="남"?B_BOY:B_GIRL;}
+function getNbrs(idx,cols,rows){
+  const r=Math.floor(idx/cols),c=idx%cols,ns=[];
+  if(r>0)ns.push(idx-cols);if(r<rows-1)ns.push(idx+cols);
+  if(c>0)ns.push(idx-1);if(c<cols-1)ns.push(idx+1);
+  return ns;
+}
+function seatBg(st,locked){
+  if(locked)return CR;if(!st)return"white";
+  return st.gender==="남"?B_BOY:B_GIRL;
+}
 function orderDown(R,C){const o=[];for(let c=0;c<C;c++)for(let r=0;r<R;r++)o.push(r*C+c);return o;}
 function orderRight(R,C){const o=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++)o.push(r*C+c);return o;}
 function orderSnakeRow(R,C){const o=[];for(let r=0;r<R;r++){const row=[];for(let c=0;c<C;c++)row.push(r*C+c);if(r%2===1)row.reverse();o.push(...row);}return o;}
 function orderSnakeCol(R,C){const o=[];for(let c=0;c<C;c++){const col=[];for(let r=0;r<R;r++)col.push(r*C+c);if(c%2===1)col.reverse();o.push(...col);}return o;}
 const ORD={down:orderDown,right:orderRight,snakeRow:orderSnakeRow,snakeCol:orderSnakeCol};
 
+// ── atoms ─────────────────────────────────────────────────────────────
 const bb={border:"none",cursor:"pointer",fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:6,fontWeight:700};
-function PBtn({onClick,color,tc,children,style}){color=color||Y;tc=tc||BR;style=style||{};return React.createElement("button",{onClick,style:{...bb,background:color,color:tc,borderRadius:20,padding:"9px 20px",fontSize:14,border:"2px solid "+BR,...style}},children);}
-function GBtn({onClick,children,style}){style=style||{};return React.createElement("button",{onClick,style:{...bb,background:"white",color:BR,borderRadius:14,padding:"7px 13px",fontSize:13,border:"2px solid #e0d4b8",...style}},children);}
-function iS(ex){return Object.assign({width:"100%",border:"2px solid #f0e8d0",borderRadius:12,padding:"8px 12px",fontSize:13,boxSizing:"border-box",outline:"none",fontFamily:"inherit"},ex||{});}
+function PBtn({onClick,color=Y,tc=BR,children,style={}}){
+  return <button onClick={onClick} style={{...bb,background:color,color:tc,borderRadius:20,padding:"9px 20px",fontSize:14,border:"2px solid "+BR,...style}}>{children}</button>;
+}
+function GBtn({onClick,children,style={}}){
+  return <button onClick={onClick} style={{...bb,background:"white",color:BR,borderRadius:14,padding:"7px 13px",fontSize:13,border:"2px solid #e0d4b8",...style}}>{children}</button>;
+}
+function iS(ex={}){
+  return{width:"100%",border:"2px solid #f0e8d0",borderRadius:12,padding:"8px 12px",fontSize:13,boxSizing:"border-box",outline:"none",fontFamily:"inherit",...ex};
+}
 
-// SVG Icons
-const ICONS={
+// SVG X 닫기 버튼
+function CloseBtn({onClick,size=20}){
+  return <button onClick={onClick} style={{border:"none",background:"rgba(0,0,0,0.06)",cursor:"pointer",borderRadius:"50%",width:size+8,height:size+8,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={BR} strokeWidth={2.5} strokeLinecap="round">
+      <line x1={4} y1={4} x2={20} y2={20}/><line x1={20} y1={4} x2={4} y2={20}/>
+    </svg>
+  </button>;
+}
+
+// SVG 아이콘
+const IP={
   shuffle:"M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5",
   arrowLeft:"M19 12H5M12 5l-7 7 7 7",
   users:"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
-  plus:"M12 5v14M5 12h14",
-  trash:"M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6",
+  plus:"M12 5v14M5 12h14",trash:"M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6",
   rotateCcw:"M1 4v6h6M3.51 15a9 9 0 1 0 .49-3.56",
   printer:"M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z",
   save:"M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8",
   clock:"M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2",
-  x:"M18 6L6 18M6 6l12 12",
   lock:"M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4",
   unlock:"M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 9.9-1",
-  alertTri:"M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01",
   checkCircle:"M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3",
-  undo:"M3 7v6h6M3.51 15A9 9 0 1 0 4.5 7.5",
-  redo:"M21 7v6h-6M20.49 15A9 9 0 1 1 19.5 7.5",
-  chevronRight:"M9 18l6-6-6-6",
-  play:"M5 3l14 9-14 9V3z",
-  skipForward:"M5 4l10 8-10 8V4zM19 5v14",
+  alertTri:"M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01",
+  undo:"M3 7v6h6M3.51 15A9 9 0 1 0 4.5 7.5",redo:"M21 7v6h-6M20.49 15A9 9 0 1 1 19.5 7.5",
+  chevronRight:"M9 18l6-6-6-6",play:"M5 3l14 9-14 9V3z",skipForward:"M5 4l10 8-10 8V4zM19 5v14",
   upload:"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
+  download:"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3",
   settings:"M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
-  menu:"M3 12h18M3 6h18M3 18h18",
 };
-function Ico({n,size,color,sw}){size=size||16;sw=sw||2;const d=ICONS[n]||"";return(
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-    {d.split("M").filter(Boolean).map((seg,i)=><path key={i} d={"M"+seg}/>)}
-  </svg>
-);}
+function Ico({n,size=16,color,sw=2}){
+  const d=IP[n]||"";
+  const segs=d.split(/(?=[ML])/).filter(s=>s.trim());
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+    {segs.map((seg,i)=><path key={i} d={seg.trim()}/>)}
+  </svg>;
+}
 
-function MiniSeat({s,student,sz}){sz=sz||66;return(
-  <div style={{width:sz,height:sz,borderRadius:10,background:seatBg(student,s.locked),border:"2px solid "+(s.locked?BR:"#e0d4b8"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+function MiniSeat({s,student,sz=66}){
+  return <div style={{width:sz,height:sz,borderRadius:10,background:seatBg(student,s.locked),border:"2px solid "+(s.locked?BR:"#e0d4b8"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
     {student
       ?<><div style={{fontSize:sz>52?16:12}}>{student.avatar}</div><div style={{fontSize:9,fontWeight:800,color:BR,maxWidth:sz-4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}}>{student.name}</div></>
       :<div style={{opacity:.15,fontSize:14}}>📚</div>}
-  </div>
-);}
+  </div>;
+}
 
-// ── NumberMode ──────────────────────────────────────────────────────
+// ── pref parser (shared) ──────────────────────────────────────────────
+function parsePrefData(text, students){
+  const lines=text.trim().split(/[\n\r]+/).filter(Boolean);
+  const parsed=[];
+  for(const line of lines){
+    const cs=line.split(/\t|,/).map(s=>s.trim());
+    let name="",prefStart=2;
+    if(cs[1]==="남"||cs[1]==="여"){name=cs[2]||"";prefStart=3;}
+    else{name=cs[1]||cs[0];prefStart=2;}
+    if(!name||!isNaN(Number(name)))continue;
+    const st=students.find(s=>s.name===name);if(!st)continue;
+    const pn=cs.slice(prefStart,prefStart+6).filter(Boolean);
+    parsed.push({
+      studentId:st.id,
+      boyPrefs:pn.slice(0,3).map(n=>{const f=students.find(s=>s.name===n);return f?f.id:null;}).filter(Boolean),
+      girlPrefs:pn.slice(3,6).map(n=>{const f=students.find(s=>s.name===n);return f?f.id:null;}).filter(Boolean),
+    });
+  }
+  return parsed;
+}
+
+// ── PrefInput: shared data upload UI ─────────────────────────────────
+function PrefInput({students, prefs, setPrefs, parseMsg, setParseMsg}){
+  const [rawText,setRawText]=useState("");
+  const fRef=useRef(null);
+  function doParse(text){
+    const p=parsePrefData(text,students);
+    setPrefs(p);
+    setParseMsg(p.length>0?"✅ "+p.length+"명 파싱 완료":"⚠️ 이름이 일치하지 않습니다.");
+  }
+  function handleFile(e){
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=ev=>{setRawText(ev.target.result);doParse(ev.target.result);};r.readAsText(f);
+  }
+  return <div style={{background:"white",border:"2px solid #f0e8d0",borderRadius:18,padding:16,width:"100%"}}>
+    <div style={{fontWeight:700,fontSize:13,color:BR,marginBottom:6}}>📊 선호 친구 데이터 (선택)</div>
+    <div style={{fontSize:11,color:"#888",marginBottom:10,lineHeight:1.7,background:BG,borderRadius:8,padding:8}}>
+      열 순서: <b>번호 · 성별 · 이름 · 남학생1~3 · 여학생1~3</b>
+    </div>
+    <input ref={fRef} type="file" accept=".csv,.txt,.tsv" style={{display:"none"}} onChange={handleFile}/>
+    <div style={{display:"flex",gap:8,marginBottom:8}}>
+      <GBtn onClick={()=>fRef.current.click()} style={{fontSize:12}}><Ico n="upload" size={13}/> 파일 올리기</GBtn>
+      {prefs.length>0&&<GBtn onClick={()=>{setPrefs([]);setParseMsg("");}} style={{fontSize:12,color:"#e74c3c",borderColor:"#e74c3c"}}><Ico n="trash" size={12}/> 초기화</GBtn>}
+    </div>
+    <textarea value={rawText} onChange={e=>setRawText(e.target.value)} placeholder={"번호\t성별\t이름\t남학생1\t남학생2\t남학생3\t여학생1\t여학생2\t여학생3"} style={{...iS({height:80,resize:"vertical",marginBottom:8})}}/>
+    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+      <PBtn onClick={()=>doParse(rawText)} style={{fontSize:12,padding:"7px 16px"}}><Ico n="checkCircle" size={13}/> 파싱하기</PBtn>
+      {parseMsg&&<div style={{fontSize:12,color:parseMsg.startsWith("✅")?"#27ae60":"#e67e22"}}>{parseMsg}</div>}
+    </div>
+    {prefs.length>0&&<div style={{marginTop:10,maxHeight:110,overflowY:"auto",display:"flex",flexDirection:"column",gap:3}}>
+      {prefs.map((p,i)=>{
+        const st=students.find(s=>s.id===p.studentId);
+        const bn=p.boyPrefs.map(id=>students.find(s=>s.id===id)?.name).filter(Boolean);
+        const gn=p.girlPrefs.map(id=>students.find(s=>s.id===id)?.name).filter(Boolean);
+        return <div key={i} style={{background:st?.gender==="남"?B_BOY:B_GIRL,borderRadius:8,padding:"4px 10px",fontSize:11,border:"1.5px solid #e0d4b8"}}>
+          <b style={{color:BR}}>{st?.avatar} {st?.name}</b>
+          {bn.length>0&&<span style={{color:"#5599cc"}}> 남: {bn.join(", ")}</span>}
+          {gn.length>0&&<span style={{color:"#cc5577"}}> 여: {gn.join(", ")}</span>}
+        </div>;
+      })}
+    </div>}
+  </div>;
+}
+
+// ── NumberMode ────────────────────────────────────────────────────────
 function NumberMode({students,seats,rows,cols,onApply}){
-  const[dir,setDir]=useState("down");
+  const [dir,setDir]=useState("down");
   const OPTS=[{id:"down",label:"⬇ 아래로",desc:"1열 위→아래"},{id:"right",label:"➡ 오른쪽",desc:"1행 좌→우"},{id:"snakeRow",label:"〜 ㄹ자",desc:"행 지그재그"},{id:"snakeCol",label:"〜 S자",desc:"열 지그재그"}];
   const prev=(()=>{
-    const order=ORD[dir](rows,cols).filter(i=>seats[i]&&seats[i].hasDesk);
+    const order=ORD[dir](rows,cols).filter(i=>seats[i]?.hasDesk);
     const sorted=[...students].sort((a,b)=>a.name.localeCompare(b.name,"ko"));
     const ns=seats.map(s=>({...s,studentId:null}));
     order.forEach((si,i)=>{if(i<sorted.length)ns[si].studentId=sorted[i].id;});
     return ns;
   })();
   const sz=Math.min(66,Math.floor(300/Math.max(cols,1)));
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center"}}>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
-        {OPTS.map(o=>(
-          <button key={o.id} onClick={()=>setDir(o.id)} style={{...bb,background:dir===o.id?Y:"white",border:"2px solid "+(dir===o.id?BR:"#ddd"),borderRadius:14,padding:"8px 14px",color:BR,flexDirection:"column",gap:1}}>
-            <span style={{fontSize:13}}>{o.label}</span>
-            <span style={{fontSize:10,fontWeight:500,color:"#9e8e84"}}>{o.desc}</span>
-          </button>
-        ))}
-      </div>
-      <div style={{background:"white",borderRadius:18,padding:14,border:"2px solid #f0e8d0"}}>
-        <div style={{fontSize:11,color:"#999",marginBottom:8,textAlign:"center"}}>미리보기</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat("+cols+", "+sz+"px)",gap:4}}>
-          {prev.map((s,i)=><MiniSeat key={i} s={s} student={students.find(x=>x.id===s.studentId)} sz={sz}/>)}
-        </div>
-      </div>
-      <PBtn onClick={()=>onApply(prev)}><Ico n="checkCircle" size={15}/>&nbsp;이 배치로 적용하기</PBtn>
+  return <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center"}}>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
+      {OPTS.map(o=><button key={o.id} onClick={()=>setDir(o.id)} style={{...bb,background:dir===o.id?Y:"white",border:"2px solid "+(dir===o.id?BR:"#ddd"),borderRadius:14,padding:"8px 14px",color:BR,flexDirection:"column",gap:1}}>
+        <span style={{fontSize:13}}>{o.label}</span><span style={{fontSize:10,fontWeight:500,color:"#9e8e84"}}>{o.desc}</span>
+      </button>)}
     </div>
-  );
+    <div style={{background:"white",borderRadius:18,padding:14,border:"2px solid #f0e8d0"}}>
+      <div style={{fontSize:11,color:"#999",marginBottom:8,textAlign:"center"}}>미리보기</div>
+      <div style={{display:"grid",gridTemplateColumns:`repeat(${cols}, ${sz}px)`,gap:4}}>
+        {prev.map((s,i)=><MiniSeat key={i} s={s} student={students.find(x=>x.id===s.studentId)} sz={sz}/>)}
+      </div>
+    </div>
+    <PBtn onClick={()=>onApply(prev)}><Ico n="checkCircle" size={15}/> 이 배치로 적용하기</PBtn>
+  </div>;
 }
 
-// ── FriendMode ──────────────────────────────────────────────────────
+// ── FriendMode ────────────────────────────────────────────────────────
 function FriendMode({students,rows,cols,onApply}){
-  const[pairType,setPairType]=useState("mixed");
-  const[result,setResult]=useState(null);
-  const[rawText,setRawText]=useState("");
-  const[prefs,setPrefs]=useState([]);
-  const[parseMsg,setParseMsg]=useState("");
-  const friendFileRef=useRef(null);
-  const boys=students.filter(s=>s.gender==="남");
-  const girls=students.filter(s=>s.gender==="여");
+  const [pairType,setPairType]=useState("mixed");
+  const [result,setResult]=useState(null);
+  const [prefs,setPrefs]=useState([]);
+  const [parseMsg,setParseMsg]=useState("");
+  const boys=students.filter(s=>s.gender==="남"), girls=students.filter(s=>s.gender==="여");
   const npc=Math.floor(cols/2);
-
-  function parsePaste(text){
-    const lines=text.trim().split(/[\n\r]+/).filter(Boolean);
-    const parsed=[];
-    for(const line of lines){
-      const cs=line.split(/\t|,/).map(s=>s.trim());
-      let name="",prefStart=2;
-      if(cs[1]==="남"||cs[1]==="여"){name=cs[2]||"";prefStart=3;}
-      else{name=cs[1]||cs[0];prefStart=2;}
-      if(!name||!isNaN(Number(name)))continue;
-      const st=students.find(s=>s.name===name);if(!st)continue;
-      const pn=cs.slice(prefStart,prefStart+6).filter(Boolean);
-      parsed.push({studentId:st.id,boyPrefs:pn.slice(0,3).map(n=>{const f=students.find(s=>s.name===n);return f?f.id:null;}).filter(Boolean),girlPrefs:pn.slice(3,6).map(n=>{const f=students.find(s=>s.name===n);return f?f.id:null;}).filter(Boolean)});
-    }
-    setPrefs(parsed);
-    setParseMsg(parsed.length>0?"✅ "+parsed.length+"명 파싱 완료":"⚠️ 이름이 일치하지 않습니다.");
-    setResult(null);
-  }
-  function handleFriendFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setRawText(ev.target.result);parsePaste(ev.target.result);};r.readAsText(f);}
 
   function calcScore(ns){
     let sc=0;
     for(let p=0;p<rows*npc;p++){
       const g=p%npc,r=Math.floor(p/npc),li=r*cols+2*g,ri=r*cols+2*g+1;
-      const iL=ns[li]?ns[li].studentId:null,iR=ns[ri]?ns[ri].studentId:null;
-      if(!iL||!iR)continue;
+      const iL=ns[li]?.studentId,iR=ns[ri]?.studentId;if(!iL||!iR)continue;
       const pL=prefs.find(x=>x.studentId===iL),pR=prefs.find(x=>x.studentId===iR);
       const stR=students.find(s=>s.id===iR),stL=students.find(s=>s.id===iL);
-      if(pL){const list=stR&&stR.gender==="남"?pL.boyPrefs:pL.girlPrefs;if(list.indexOf(iR)>=0)sc++;}
-      if(pR){const list=stL&&stL.gender==="남"?pR.boyPrefs:pR.girlPrefs;if(list.indexOf(iL)>=0)sc++;}
+      if(pL){const list=stR?.gender==="남"?pL.boyPrefs:pL.girlPrefs;if(list.includes(iR))sc++;}
+      if(pR){const list=stL?.gender==="남"?pR.boyPrefs:pR.girlPrefs;if(list.includes(iL))sc++;}
     }
     return sc;
   }
-
   function run(){
     let bestNs=null,bestSc=-1;
     for(let t=0;t<500;t++){
       const ns=makeSeats(rows,cols);
       if(pairType==="mixed"){
-        const bs=[...boys].sort(()=>Math.random()-.5);
-        const gs=[...girls].sort(()=>Math.random()-.5);
+        const bs=[...boys].sort(()=>Math.random()-.5),gs=[...girls].sort(()=>Math.random()-.5);
         const n=Math.min(bs.length,gs.length,rows*npc);
-        for(let p=0;p<n;p++){const g=p%npc,r=Math.floor(p/npc),li=r*cols+2*g,ri=r*cols+2*g+1;if(li<rows*cols)ns[li].studentId=bs[p]?bs[p].id:null;if(ri<rows*cols)ns[ri].studentId=gs[p]?gs[p].id:null;}
-      }else{
+        for(let p=0;p<n;p++){const g=p%npc,r=Math.floor(p/npc),li=r*cols+2*g,ri=r*cols+2*g+1;if(li<rows*cols)ns[li].studentId=bs[p]?.id||null;if(ri<rows*cols)ns[ri].studentId=gs[p]?.id||null;}
+      } else {
         const ab=[...boys].sort(()=>Math.random()-.5),ag=[...girls].sort(()=>Math.random()-.5);
         let bi=0,gi=0;
-        for(let r=0;r<rows;r++){for(let g=0;g<npc;g++){const li=r*cols+2*g,ri=r*cols+2*g+1;if(bi+1<ab.length){ns[li].studentId=ab[bi]?ab[bi].id:null;bi++;ns[ri].studentId=ab[bi]?ab[bi].id:null;bi++;}else if(gi+1<ag.length){ns[li].studentId=ag[gi]?ag[gi].id:null;gi++;ns[ri].studentId=ag[gi]?ag[gi].id:null;gi++;}}}
+        for(let r=0;r<rows;r++)for(let g=0;g<npc;g++){const li=r*cols+2*g,ri=r*cols+2*g+1;if(bi+1<ab.length){ns[li].studentId=ab[bi++]?.id||null;ns[ri].studentId=ab[bi++]?.id||null;}else if(gi+1<ag.length){ns[li].studentId=ag[gi++]?.id||null;ns[ri].studentId=ag[gi++]?.id||null;}}
       }
       const sc=calcScore(ns);if(sc>bestSc){bestSc=sc;bestNs=ns.map(s=>({...s}));}
     }
     const satIds=new Set(),unsatIds=new Set();
     for(let p=0;p<rows*npc;p++){
       const g=p%npc,r=Math.floor(p/npc),li=r*cols+2*g,ri=r*cols+2*g+1;
-      const iL=bestNs[li]?bestNs[li].studentId:null,iR=bestNs[ri]?bestNs[ri].studentId:null;
-      if(!iL||!iR)continue;
+      const iL=bestNs[li]?.studentId,iR=bestNs[ri]?.studentId;if(!iL||!iR)continue;
       const pL=prefs.find(x=>x.studentId===iL),pR=prefs.find(x=>x.studentId===iR);
       const stR=students.find(s=>s.id===iR),stL=students.find(s=>s.id===iL);
-      if(pL){const ok=(stR&&stR.gender==="남"?pL.boyPrefs:pL.girlPrefs).indexOf(iR)>=0;if(ok)satIds.add(iL);else unsatIds.add(iL);}
-      if(pR){const ok=(stL&&stL.gender==="남"?pR.boyPrefs:pR.girlPrefs).indexOf(iL)>=0;if(ok)satIds.add(iR);else unsatIds.add(iR);}
+      if(pL){(stR?.gender==="남"?pL.boyPrefs:pL.girlPrefs).includes(iR)?satIds.add(iL):unsatIds.add(iL);}
+      if(pR){(stL?.gender==="남"?pR.boyPrefs:pR.girlPrefs).includes(iL)?satIds.add(iR):unsatIds.add(iR);}
     }
     setResult({seats:bestNs,satIds,unsatIds,total:prefs.length});
   }
-
   const sz=Math.min(66,Math.floor(290/Math.max(cols,1)));
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center",width:"100%",maxWidth:600}}>
-      <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-        {[["mixed","💑 남-여 짝"],["same","👫 같은 성별 짝"]].map(function(item){const v=item[0],lbl=item[1];return(
-          <button key={v} onClick={()=>{setPairType(v);setResult(null);}} style={{...bb,background:pairType===v?Y:"white",border:"2px solid "+(pairType===v?BR:"#ddd"),borderRadius:16,padding:"9px 18px",color:BR,fontSize:13}}>{lbl}</button>
-        );})}
-      </div>
-      <div style={{background:"white",border:"2px solid #f0e8d0",borderRadius:18,padding:16,width:"100%"}}>
-        <div style={{fontWeight:700,fontSize:13,color:BR,marginBottom:6}}>📊 선호 짝꿍 데이터 (선택)</div>
-        <div style={{fontSize:11,color:"#888",marginBottom:10,lineHeight:1.7,background:BG,borderRadius:8,padding:8}}>열 순서: <b>번호 · 성별 · 이름 · 남학생1~3 · 여학생1~3</b></div>
-        <input ref={friendFileRef} type="file" accept=".csv,.txt,.tsv" style={{display:"none"}} onChange={handleFriendFile}/>
-        <div style={{display:"flex",gap:8,marginBottom:8}}>
-          <GBtn onClick={()=>friendFileRef.current.click()} style={{fontSize:12}}><Ico n="upload" size={13}/>&nbsp;파일 올리기</GBtn>
-          {prefs.length>0&&<GBtn onClick={()=>{setPrefs([]);setParseMsg("");setRawText("");setResult(null);}} style={{fontSize:12,color:"#e74c3c",borderColor:"#e74c3c"}}><Ico n="x" size={12}/>&nbsp;초기화</GBtn>}
-        </div>
-        <textarea value={rawText} onChange={e=>setRawText(e.target.value)} placeholder={"번호\t성별\t이름\t남학생1\t남학생2\t남학생3\t여학생1\t여학생2\t여학생3"} style={{...iS({height:80,resize:"vertical"}),marginBottom:8}}/>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <PBtn onClick={()=>parsePaste(rawText)} style={{fontSize:12,padding:"7px 16px"}}><Ico n="checkCircle" size={13}/>&nbsp;파싱하기</PBtn>
-          {parseMsg&&<div style={{fontSize:12,color:parseMsg.startsWith("✅")?"#27ae60":"#e67e22"}}>{parseMsg}</div>}
-        </div>
-        {prefs.length>0&&(
-          <div style={{marginTop:10,maxHeight:120,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
-            {prefs.map(function(p,i){
-              const st=students.find(s=>s.id===p.studentId);
-              const bn=p.boyPrefs.map(id=>{const f=students.find(s=>s.id===id);return f?f.name:null;}).filter(Boolean);
-              const gn=p.girlPrefs.map(id=>{const f=students.find(s=>s.id===id);return f?f.name:null;}).filter(Boolean);
-              return(
-                <div key={i} style={{background:st&&st.gender==="남"?B_BOY:B_GIRL,borderRadius:10,padding:"5px 10px",fontSize:11,border:"1.5px solid #e0d4b8"}}>
-                  <b style={{color:BR}}>{st?st.avatar:""} {st?st.name:""}</b>
-                  {bn.length>0&&<span style={{color:"#5599cc"}}> 남: {bn.join(", ")}</span>}
-                  {gn.length>0&&<span style={{color:"#cc5577"}}> 여: {gn.join(", ")}</span>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <PBtn onClick={run}><Ico n="play" size={13}/>&nbsp;최적 배치 실행</PBtn>
-      {result&&(
-        <div style={{display:"flex",flexDirection:"column",gap:12,width:"100%",alignItems:"center"}}>
-          {result.total>0&&(
-            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-              <div style={{textAlign:"center",background:"white",border:"2px solid #d4edda",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:"#27ae60"}}>{result.satIds.size}</div><div style={{fontSize:10,color:"#888"}}>선호 성공 🎉</div></div>
-              <div style={{textAlign:"center",background:"white",border:"2px solid #f8d7da",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:"#e74c3c"}}>{result.unsatIds.size}</div><div style={{fontSize:10,color:"#888"}}>아쉬운 친구 ⭐</div></div>
-              <div style={{textAlign:"center",background:"white",border:"2px solid #f0e8d0",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:BR}}>{result.total>0?Math.round(result.satIds.size/result.total*100):0}%</div><div style={{fontSize:10,color:"#888"}}>만족도</div></div>
-            </div>
-          )}
-          <div style={{background:"white",borderRadius:18,padding:14,border:"2px solid #f0e8d0",width:"100%"}}>
-            <div style={{fontSize:11,color:"#999",marginBottom:8,textAlign:"center"}}>배치 결과 · ⭐ = 다음 기회 우선권</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat("+cols+", "+sz+"px)",gap:4,justifyContent:"center"}}>
-              {result.seats.map(function(s,i){
-                const st=students.find(x=>x.id===s.studentId);
-                const isU=st&&result.unsatIds.has(st.id),isS=st&&result.satIds.has(st.id);
-                return(
-                  <div key={i} style={{width:sz,height:sz,borderRadius:10,background:seatBg(st,s.locked),border:"2.5px solid "+(isU?"#e74c3c":isS?"#27ae60":"#e0d4b8"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                    {isU&&<span style={{position:"absolute",top:1,right:2,fontSize:10}}>⭐</span>}
-                    {st?<><div style={{fontSize:sz>52?16:12}}>{st.avatar}</div><div style={{fontSize:9,fontWeight:800,color:BR,maxWidth:sz-4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}}>{st.name}</div></>:<div style={{opacity:.15,fontSize:14}}>📚</div>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {result.unsatIds.size>0&&(
-            <div style={{background:"#fff8e1",border:"2px solid #ffc107",borderRadius:14,padding:"10px 14px",width:"100%",fontSize:12}}>
-              <b style={{color:BR}}>⭐ 다음에 우선권을 줄 친구들:</b>
-              <div style={{marginTop:6,display:"flex",flexWrap:"wrap",gap:6}}>
-                {Array.from(result.unsatIds).map(id=>{const st=students.find(s=>s.id===id);return st?<span key={id} style={{background:"white",border:"1.5px solid #ffc107",borderRadius:10,padding:"3px 8px",fontWeight:600}}>{st.avatar} {st.name}</span>:null;})}
-              </div>
-            </div>
-          )}
-          <PBtn onClick={()=>onApply(result.seats,students)}><Ico n="checkCircle" size={14}/>&nbsp;배치도에 반영하기</PBtn>
-        </div>
+  return <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center",width:"100%",maxWidth:600}}>
+    <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+      {[["mixed","💑 남-여 짝"],["same","👫 같은 성별 짝"]].map(([v,lbl])=>
+        <button key={v} onClick={()=>{setPairType(v);setResult(null);}} style={{...bb,background:pairType===v?Y:"white",border:"2px solid "+(pairType===v?BR:"#ddd"),borderRadius:16,padding:"9px 18px",color:BR,fontSize:13}}>{lbl}</button>
       )}
     </div>
-  );
+    <PrefInput students={students} prefs={prefs} setPrefs={setPrefs} parseMsg={parseMsg} setParseMsg={setParseMsg}/>
+    <PBtn onClick={run}><Ico n="play" size={13}/> 최적 배치 실행</PBtn>
+    {result&&<>
+      {result.total>0&&<div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+        <div style={{textAlign:"center",background:"white",border:"2px solid #d4edda",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:"#27ae60"}}>{result.satIds.size}</div><div style={{fontSize:10,color:"#888"}}>선호 성공 🎉</div></div>
+        <div style={{textAlign:"center",background:"white",border:"2px solid #f8d7da",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:"#e74c3c"}}>{result.unsatIds.size}</div><div style={{fontSize:10,color:"#888"}}>아쉬움 ⭐</div></div>
+        <div style={{textAlign:"center",background:"white",border:"2px solid #f0e8d0",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:BR}}>{result.total>0?Math.round(result.satIds.size/result.total*100):0}%</div><div style={{fontSize:10,color:"#888"}}>만족도</div></div>
+      </div>}
+      <div style={{background:"white",borderRadius:18,padding:14,border:"2px solid #f0e8d0",width:"100%"}}>
+        <div style={{fontSize:11,color:"#999",marginBottom:8,textAlign:"center"}}>배치 결과 · ⭐ = 다음 기회 우선권</div>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${cols}, ${sz}px)`,gap:4,justifyContent:"center"}}>
+          {result.seats.map((s,i)=>{
+            const st=students.find(x=>x.id===s.studentId);
+            const isU=st&&result.unsatIds.has(st.id),isS=st&&result.satIds.has(st.id);
+            return <div key={i} style={{width:sz,height:sz,borderRadius:10,background:seatBg(st,false),border:"2.5px solid "+(isU?"#e74c3c":isS?"#27ae60":"#e0d4b8"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative"}}>
+              {isU&&<span style={{position:"absolute",top:1,right:2,fontSize:10}}>⭐</span>}
+              {st?<><div style={{fontSize:sz>52?16:12}}>{st.avatar}</div><div style={{fontSize:9,fontWeight:800,color:BR,maxWidth:sz-4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}}>{st.name}</div></>:<div style={{opacity:.15,fontSize:14}}>📚</div>}
+            </div>;
+          })}
+        </div>
+      </div>
+      {result.unsatIds.size>0&&<div style={{background:"#fff8e1",border:"2px solid #ffc107",borderRadius:14,padding:"10px 14px",width:"100%",fontSize:12}}>
+        <b style={{color:BR}}>⭐ 다음에 우선권을 줄 친구들:</b>
+        <div style={{marginTop:6,display:"flex",flexWrap:"wrap",gap:6}}>
+          {[...result.unsatIds].map(id=>{const st=students.find(s=>s.id===id);return st?<span key={id} style={{background:"white",border:"1.5px solid #ffc107",borderRadius:10,padding:"3px 8px",fontWeight:600}}>{st.avatar} {st.name}</span>:null;})}
+        </div>
+      </div>}
+      <PBtn onClick={()=>onApply(result.seats,students)}><Ico n="checkCircle" size={14}/> 배치도에 반영하기</PBtn>
+    </>}
+  </div>;
 }
 
-// ── LadderMode ──────────────────────────────────────────────────────
+// ── GroupMode ─────────────────────────────────────────────────────────
+function GroupMode({students, onDone}){
+  const [prefs,setPrefs]=useState([]);
+  const [parseMsg,setParseMsg]=useState("");
+  const [result,setResult]=useState(null);
+  const boys=students.filter(s=>s.gender==="남"), girls=students.filter(s=>s.gender==="여");
+
+  function scoreAssign(asgn){
+    let score=0;
+    asgn.forEach(g=>{
+      g.members.forEach(sid=>{
+        const p=prefs.find(x=>x.studentId===sid);if(!p)return;
+        const allP=[...p.boyPrefs,...p.girlPrefs];
+        if(allP.some(pid=>g.members.includes(pid)))score++;
+      });
+    });
+    return score;
+  }
+  function buildOne(){
+    const bShuf=[...boys].sort(()=>Math.random()-.5);
+    const gShuf=[...girls].sort(()=>Math.random()-.5);
+    let bi=0,gi=0;
+    return GROUP_DEF.map(gd=>{
+      const members=[];
+      for(let b=0;b<gd.boys&&bi<bShuf.length;b++)members.push(bShuf[bi++].id);
+      for(let g=0;g<gd.girls&&gi<gShuf.length;g++)members.push(gShuf[gi++].id);
+      return {groupId:gd.id,members};
+    });
+  }
+  function run(){
+    if(!students.length){setParseMsg("⚠️ 학생 명단을 먼저 등록해주세요.");return;}
+    let best=null,bestSc=-1;
+    for(let t=0;t<800;t++){
+      const a=buildOne(),sc=scoreAssign(a);
+      if(sc>bestSc){bestSc=sc;best=a.map(g=>({...g,members:[...g.members]}));}
+    }
+    const satIds=new Set(),unsatIds=new Set();
+    best.forEach(g=>{
+      g.members.forEach(sid=>{
+        const p=prefs.find(x=>x.studentId===sid);if(!p)return;
+        const allP=[...p.boyPrefs,...p.girlPrefs];
+        if(allP.some(pid=>g.members.includes(pid)))satIds.add(sid);
+        else unsatIds.add(sid);
+      });
+    });
+    setResult({groupAssign:best,satIds,unsatIds,totalWithPref:prefs.length});
+  }
+
+  function renderGroup(gd){
+    const asgn=result?.groupAssign.find(g=>g.groupId===gd.id);
+    const members=asgn?.members||[];
+    const SZ=80;
+    return <div key={gd.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+      <div style={{fontSize:12,fontWeight:700,color:BR,background:GROUP_COLORS[(gd.id-1)%GROUP_COLORS.length],borderRadius:8,padding:"3px 12px",marginBottom:2}}>{gd.id}모둠</div>
+      <div style={{display:"grid",gridTemplateColumns:`repeat(2, ${SZ}px)`,gap:5}}>
+        {Array.from({length:gd.size},(_,di)=>{
+          const sid=members[di]||null;
+          const st=sid?students.find(x=>x.id===sid):null;
+          const isU=st&&result?.unsatIds.has(st.id);
+          const isS=st&&result?.satIds.has(st.id);
+          return <div key={di} style={{width:SZ,height:SZ,borderRadius:12,background:st?seatBg(st,false):"white",border:isU?"3px solid #e74c3c":isS?"3px solid #27ae60":"2px solid #e0d4b8",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative",boxShadow:"0 2px 8px rgba(66,54,48,.08)"}}>
+            {isU&&<span style={{position:"absolute",top:1,right:2,fontSize:10}}>⭐</span>}
+            {st?<><div style={{fontSize:20}}>{st.avatar}</div><div style={{fontSize:11,fontWeight:800,color:BR,maxWidth:SZ-8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}}>{st.name}</div></>:<div style={{opacity:.15,fontSize:18}}>📚</div>}
+          </div>;
+        })}
+      </div>
+    </div>;
+  }
+
+  const front=GROUP_DEF.filter(g=>g.row===0);
+  const back=GROUP_DEF.filter(g=>g.row===1);
+
+  return <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center",width:"100%",maxWidth:700}}>
+    <PrefInput students={students} prefs={prefs} setPrefs={setPrefs} parseMsg={parseMsg} setParseMsg={setParseMsg}/>
+    <div style={{background:"#f0f9f0",border:"1.5px solid #a8dba8",borderRadius:14,padding:12,fontSize:12,color:BR,width:"100%",lineHeight:1.9}}>
+      <b>모둠 구성</b>: <span style={{color:"#27ae60"}}>1·3·4·6모둠</span> 남2+여2 &nbsp;
+      <span style={{color:"#e67e22"}}>2모둠</span> 남1+여2 &nbsp;
+      <span style={{color:"#8e44ad"}}>5모둠</span> 남2+여1<br/>
+      총 22석 · 현재 학생: 남 {boys.length}명 · 여 {girls.length}명
+    </div>
+    <PBtn onClick={run}><Ico n="play" size={13}/> 최적 모둠 배치 실행</PBtn>
+    {result&&<div style={{display:"flex",flexDirection:"column",gap:14,width:"100%",alignItems:"center"}}>
+      {result.totalWithPref>0&&<div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+        <div style={{textAlign:"center",background:"white",border:"2px solid #d4edda",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:"#27ae60"}}>{result.satIds.size}</div><div style={{fontSize:10,color:"#888"}}>선호 성공 🎉</div></div>
+        <div style={{textAlign:"center",background:"white",border:"2px solid #f8d7da",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:"#e74c3c"}}>{result.unsatIds.size}</div><div style={{fontSize:10,color:"#888"}}>아쉬움 ⭐</div></div>
+        <div style={{textAlign:"center",background:"white",border:"2px solid #f0e8d0",borderRadius:14,padding:"10px 18px"}}><div style={{fontSize:22,fontWeight:900,color:BR}}>{result.totalWithPref>0?Math.round(result.satIds.size/result.totalWithPref*100):0}%</div><div style={{fontSize:10,color:"#888"}}>만족도</div></div>
+      </div>}
+      <div style={{background:"white",borderRadius:20,padding:20,border:"2px solid #f0e8d0",width:"100%"}}>
+        <div style={{background:"#2d4a2d",color:"white",borderRadius:10,padding:"8px",marginBottom:16,fontWeight:800,fontSize:15,letterSpacing:4,textAlign:"center"}}>칠판</div>
+        <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginBottom:10}}>── 앞줄 ──</div>
+        <div style={{display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap",marginBottom:14}}>
+          {front.map(gd=>renderGroup(gd))}
+        </div>
+        <div style={{borderTop:"2px dashed #e8dcc8",margin:"4px 0 14px"}}/>
+        <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginBottom:10}}>── 뒷줄 ──</div>
+        <div style={{display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
+          {back.map(gd=>renderGroup(gd))}
+        </div>
+      </div>
+      {result.unsatIds.size>0&&<div style={{background:"#fff8e1",border:"2px solid #ffc107",borderRadius:14,padding:"10px 14px",width:"100%",fontSize:12}}>
+        <b style={{color:BR}}>⭐ 다음에 우선권을 줄 친구들:</b>
+        <div style={{marginTop:6,display:"flex",flexWrap:"wrap",gap:6}}>
+          {[...result.unsatIds].map(id=>{const st=students.find(s=>s.id===id);return st?<span key={id} style={{background:"white",border:"1.5px solid #ffc107",borderRadius:10,padding:"3px 8px",fontWeight:600}}>{st.avatar} {st.name}</span>:null;})}
+        </div>
+      </div>}
+      <PBtn onClick={()=>onDone(result)}><Ico n="checkCircle" size={14}/> 배치 완료</PBtn>
+    </div>}
+  </div>;
+}
+
+// ── LadderMode ────────────────────────────────────────────────────────
 function LadderMode({students,rows,cols,onApply}){
   const npc=Math.floor(cols/2);
-  const[sG]=useState(()=>[...students.filter(s=>s.gender==="여")].sort(()=>Math.random()-.5));
-  const[sB]=useState(()=>[...students.filter(s=>s.gender==="남")].sort(()=>Math.random()-.5));
+  const [sG]=useState(()=>[...students.filter(s=>s.gender==="여")].sort(()=>Math.random()-.5));
+  const [sB]=useState(()=>[...students.filter(s=>s.gender==="남")].sort(()=>Math.random()-.5));
   const n=Math.min(sG.length,sB.length,rows*npc);
   const top=sG.slice(0,n),bot=sB.slice(0,n);
-  const W=Math.min(56,Math.floor(500/Math.max(n,1)));
-  const H=280,PAD=28,STEPS=6,yS=H/(STEPS+1),tW=PAD*2+W*(n-1)+48;
+  const W=Math.min(56,Math.floor(500/Math.max(n,1))),H=280,PAD=28,STEPS=6,yS=H/(STEPS+1),tW=PAD*2+W*(n-1)+48;
   const LC=["#FFE066","#B5EAD7","#FFDDE1","#C7CEEA","#FFF3C4","#d4f1d4","#ffe0cc","#e0d4f1","#ffd6e0","#d6f0ff"];
-  const[hz]=useState(()=>{
-    const rs=[];
-    for(let s=0;s<STEPS;s++){const used=new Set(),row=[];for(let i=0;i<n-1;i++){if(!used.has(i)&&!used.has(i+1)&&Math.random()>.5){row.push(i);used.add(i);used.add(i+1);}}rs.push(row);}
-    return rs;
+  const [hz]=useState(()=>{
+    const rs=[];for(let s=0;s<STEPS;s++){const used={},row=[];for(let i=0;i<n-1;i++){if(!used[i]&&!used[i+1]&&Math.random()>.5){row.push(i);used[i]=1;used[i+1]=1;}}rs.push(row);}return rs;
   });
-  const traces=(()=>{
-    const res=[];
-    for(let st=0;st<n;st++){let col=st;const pts=[[col,0]];for(let s=0;s<STEPS;s++){const y=(s+1)*yS,row=hz[s];if(row.indexOf(col)>=0){col++;pts.push([col,y]);}else if(row.indexOf(col-1)>=0){col--;pts.push([col,y]);}else pts.push([col,y]);}pts.push([col,H]);res.push({pts:pts,end:col});}
-    return res;
-  })();
-  const[rev,setRev]=useState([]);
-  const[done,setDone]=useState(false);
+  const traces=(()=>{const res=[];for(let st=0;st<n;st++){let col=st;const pts=[[col,0]];for(let s=0;s<STEPS;s++){const y=(s+1)*yS,row=hz[s];if(row.includes(col)){col++;pts.push([col,y]);}else if(row.includes(col-1)){col--;pts.push([col,y]);}else pts.push([col,y]);}pts.push([col,H]);res.push({pts,end:col});}return res;})();
+  const [rev,setRev]=useState([]),[ done,setDone]=useState(false);
   function showAll(){setRev(traces.map((_,i)=>i));setDone(true);}
-  function showNext(){const nx=rev.length;if(nx<n){const r=rev.concat([nx]);setRev(r);if(r.length===n)setDone(true);}}
-  function pathD(pts){return pts.map(function(pt,i){return(i===0?"M":"L")+(PAD+pt[0]*W)+","+(26+pt[1]);}).join(" ");}
-  function apply(){
-    const ns=makeSeats(rows,cols);
-    traces.forEach(function(t,gi){
-      const girl=top[gi],boy=bot[t.end];if(!girl||!boy)return;
-      const pc=t.end%npc,pr=Math.floor(t.end/npc),li=pr*cols+2*pc,ri=pr*cols+2*pc+1;
-      if(li<rows*cols)ns[li].studentId=girl.id;if(ri<rows*cols)ns[ri].studentId=boy.id;
-    });
-    onApply(ns);
-  }
-  return(
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-      <div style={{background:"#fff8f0",border:"1.5px solid #ffddb0",borderRadius:12,padding:10,fontSize:12,color:BR}}>
-        🩷 위: 여학생 무작위({top.length}명) · 🔵 아래: 남학생 무작위({bot.length}명)
-      </div>
-      <div style={{overflowX:"auto",maxWidth:"100%"}}>
-        <svg width={tW} height={H+90} style={{background:"white",borderRadius:18,border:"2px solid #f0e8d0",display:"block"}}>
-          {Array.from({length:n},function(_,i){return <line key={i} x1={PAD+i*W} y1={26} x2={PAD+i*W} y2={26+H} stroke="#e8dcc8" strokeWidth={3}/>;} )}
-          {hz.map(function(row,s){return row.map(function(i){return <line key={s+"-"+i} x1={PAD+i*W} y1={26+(s+1)*yS} x2={PAD+(i+1)*W} y2={26+(s+1)*yS} stroke="#d4b896" strokeWidth={3}/>;});} )}
-          {rev.map(function(i){return <path key={i} d={pathD(traces[i].pts)} fill="none" stroke={LC[i%LC.length]} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" opacity={.85}/>;} )}
-          {top.map(function(s,i){return(
-            <g key={i}>
-              <rect x={PAD+i*W-22} y={3} width={44} height={21} rx={10} fill={rev.indexOf(i)>=0?"#ffd6e0":"#fff0f5"} stroke="#e0a0b0" strokeWidth={1.5}/>
-              <text x={PAD+i*W} y={17} textAnchor="middle" fontSize={10} fontWeight="bold" fill={BR}>{s.name.length>3?s.name.slice(0,3)+"…":s.name}</text>
-            </g>
-          );})}
-          {bot.map(function(s,i){
-            const aTo=traces.findIndex(t=>t.end===i);
-            return(
-              <g key={i}>
-                <rect x={PAD+i*W-22} y={26+H+5} width={44} height={21} rx={10} fill={aTo>=0&&rev.indexOf(aTo)>=0?"#d6f0ff":"#f0f8ff"} stroke="#a0c8e0" strokeWidth={1.5}/>
-                <text x={PAD+i*W} y={26+H+20} textAnchor="middle" fontSize={10} fontWeight="bold" fill={BR}>{s.name.length>3?s.name.slice(0,3)+"…":s.name}</text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
-        <GBtn onClick={showNext} style={{opacity:done?.4:1}}><Ico n="play" size={13}/>&nbsp;한 명씩 보기</GBtn>
-        <GBtn onClick={showAll}><Ico n="skipForward" size={13}/>&nbsp;전체 한 번에</GBtn>
-        {done&&<PBtn onClick={apply}><Ico n="checkCircle" size={13}/>&nbsp;결과 반영하기</PBtn>}
-      </div>
+  function showNext(){const nx=rev.length;if(nx<n){const r=[...rev,nx];setRev(r);if(r.length===n)setDone(true);}}
+  function pathD(pts){return pts.map(([c,y],i)=>(i===0?"M":"L")+(PAD+c*W)+","+(26+y)).join(" ");}
+  function apply(){const ns=makeSeats(rows,cols);traces.forEach((t,gi)=>{const girl=top[gi],boy=bot[t.end];if(!girl||!boy)return;const pc=t.end%npc,pr=Math.floor(t.end/npc),li=pr*cols+2*pc,ri=pr*cols+2*pc+1;if(li<rows*cols)ns[li].studentId=girl.id;if(ri<rows*cols)ns[ri].studentId=boy.id;});onApply(ns);}
+  return <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+    <div style={{background:"#fff8f0",border:"1.5px solid #ffddb0",borderRadius:12,padding:10,fontSize:12,color:BR}}>🩷 위: 여학생 무작위({top.length}명) · 🔵 아래: 남학생 무작위({bot.length}명)</div>
+    <div style={{overflowX:"auto",maxWidth:"100%"}}>
+      <svg width={tW} height={H+90} style={{background:"white",borderRadius:18,border:"2px solid #f0e8d0",display:"block"}}>
+        {Array.from({length:n},(_,i)=><line key={i} x1={PAD+i*W} y1={26} x2={PAD+i*W} y2={26+H} stroke="#e8dcc8" strokeWidth={3}/>)}
+        {hz.map((row,s)=>row.map(i=><line key={s+"-"+i} x1={PAD+i*W} y1={26+(s+1)*yS} x2={PAD+(i+1)*W} y2={26+(s+1)*yS} stroke="#d4b896" strokeWidth={3}/>))}
+        {rev.map(i=><path key={i} d={pathD(traces[i].pts)} fill="none" stroke={LC[i%LC.length]} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" opacity={.85}/>)}
+        {top.map((s,i)=><g key={i}><rect x={PAD+i*W-22} y={3} width={44} height={21} rx={10} fill={rev.includes(i)?"#ffd6e0":"#fff0f5"} stroke="#e0a0b0" strokeWidth={1.5}/><text x={PAD+i*W} y={17} textAnchor="middle" fontSize={10} fontWeight="bold" fill={BR}>{s.name.length>3?s.name.slice(0,3)+"…":s.name}</text></g>)}
+        {bot.map((s,i)=>{const aTo=traces.findIndex(t=>t.end===i);return <g key={i}><rect x={PAD+i*W-22} y={26+H+5} width={44} height={21} rx={10} fill={aTo>=0&&rev.includes(aTo)?"#d6f0ff":"#f0f8ff"} stroke="#a0c8e0" strokeWidth={1.5}/><text x={PAD+i*W} y={26+H+20} textAnchor="middle" fontSize={10} fontWeight="bold" fill={BR}>{s.name.length>3?s.name.slice(0,3)+"…":s.name}</text></g>;})}
+      </svg>
     </div>
-  );
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
+      <GBtn onClick={showNext} style={{opacity:done?.4:1}}><Ico n="play" size={13}/> 한 명씩 보기</GBtn>
+      <GBtn onClick={showAll}><Ico n="skipForward" size={13}/> 전체 한 번에</GBtn>
+      {done&&<PBtn onClick={apply}><Ico n="checkCircle" size={13}/> 결과 반영하기</PBtn>}
+    </div>
+  </div>;
 }
 
-// ── TeacherMode ──────────────────────────────────────────────────────
+// ── TeacherMode ───────────────────────────────────────────────────────
 function TeacherMode({students,seats,setSeats,rows,cols,onDone}){
-  const[sel,setSel]=useState(null);
-  const[hist,setHist]=useState([seats.map(s=>({...s}))]);
-  const[hIdx,setHIdx]=useState(0);
-  function push(ns){const next=hist.slice(0,hIdx+1).concat([ns.map(s=>({...s}))]);setHist(next);setHIdx(next.length-1);setSeats(ns);}
+  const [sel,setSel]=useState(null);
+  const [hist,setHist]=useState([seats.map(s=>({...s}))]);
+  const [hIdx,setHIdx]=useState(0);
+  function push(ns){const next=[...hist.slice(0,hIdx+1),ns.map(s=>({...s}))];setHist(next);setHIdx(next.length-1);setSeats(ns);}
   function undo(){if(hIdx>0){const p=hIdx-1;setSeats(hist[p].map(s=>({...s})));setHIdx(p);}}
   function redo(){if(hIdx<hist.length-1){const nx=hIdx+1;setSeats(hist[nx].map(s=>({...s})));setHIdx(nx);}}
   const assigned=seats.map(s=>s.studentId).filter(Boolean);
-  const unassigned=students.filter(s=>assigned.indexOf(s.id)<0);
+  const unassigned=students.filter(s=>!assigned.includes(s.id));
   function clickDesk(idx){
     if(!seats[idx].hasDesk)return;
     if(sel===null){if(seats[idx].studentId){const ns=seats.map(s=>({...s}));ns[idx].studentId=null;push(ns);}return;}
     const ns=seats.map(s=>({...s}));
-    const pv=ns.findIndex(s=>s.studentId===sel);
-    if(pv>=0)ns[pv].studentId=null;
+    const pv=ns.findIndex(s=>s.studentId===sel);if(pv>=0)ns[pv].studentId=null;
     ns[idx].studentId=sel;push(ns);setSel(null);
   }
   const sz=Math.min(86,Math.floor(370/Math.max(cols,1)));
-  return(
-    <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center",width:"100%"}}>
-      <div style={{background:"white",borderRadius:18,padding:14,border:"2px solid #f0e8d0",width:166,flexShrink:0}}>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:BR}}>미배정 ({unassigned.length}명)</div>
-        {sel&&<div style={{fontSize:11,color:"#e67e22",marginBottom:8,fontWeight:600,background:"#fff8f0",borderRadius:8,padding:"4px 8px"}}>👆 빈 책상을 클릭하세요</div>}
-        <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:380,overflowY:"auto"}}>
-          {unassigned.map(s=>(
-            <div key={s.id} onClick={()=>setSel(x=>x===s.id?null:s.id)} style={{display:"flex",alignItems:"center",gap:8,background:sel===s.id?Y:seatBg(s,false),border:"2px solid "+(sel===s.id?BR:"#e0d4b8"),borderRadius:12,padding:"6px 10px",cursor:"pointer",fontWeight:600,fontSize:13}}>
-              <span>{s.avatar}</span><span>{s.name}</span><span style={{fontSize:10,marginLeft:"auto",color:"#888"}}>{s.gender}</span>
-            </div>
-          ))}
-          {unassigned.length===0&&<div style={{fontSize:12,color:"#aaa",textAlign:"center",padding:8}}>모두 배정됨 🎉</div>}
-        </div>
-      </div>
-      <div style={{display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
-        <div style={{display:"flex",gap:7,flexWrap:"wrap",justifyContent:"center"}}>
-          <GBtn onClick={undo} style={{opacity:hIdx===0?.35:1,fontSize:12,padding:"6px 11px"}}><Ico n="undo" size={13}/>&nbsp;취소</GBtn>
-          <GBtn onClick={redo} style={{opacity:hIdx===hist.length-1?.35:1,fontSize:12,padding:"6px 11px"}}><Ico n="redo" size={13}/>&nbsp;다시 실행</GBtn>
-          <GBtn onClick={()=>push(makeSeats(rows,cols))} style={{fontSize:12,padding:"6px 11px",color:"#e74c3c",borderColor:"#e74c3c"}}><Ico n="rotateCcw" size={13}/>&nbsp;처음부터</GBtn>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat("+cols+", "+sz+"px)",gap:6}}>
-          {seats.map(function(s,i){
-            if(!s.hasDesk)return <div key={i} style={{width:sz,height:sz,borderRadius:14,border:"2px dashed #e0d4b8",display:"flex",alignItems:"center",justifyContent:"center",opacity:.3}}><div style={{fontSize:9,color:"#bbb"}}>{i+1}</div></div>;
-            const st=students.find(x=>x.id===s.studentId);
-            const isT=sel!==null&&!s.studentId;
-            return(
-              <div key={i} onClick={()=>clickDesk(i)} style={{width:sz,height:sz,borderRadius:14,background:isT?"#fffbe6":seatBg(st,s.locked),border:"2.5px solid "+(isT?"#ffc107":s.locked?BR:"#e0d4b8"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",position:"relative",boxShadow:"0 2px 8px rgba(66,54,48,.08)"}}>
-                {st?<><div style={{fontSize:sz>70?24:18}}>{st.avatar}</div><div style={{fontSize:sz>70?13:10,fontWeight:800,color:BR,maxWidth:sz-8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}}>{st.name}</div><button onClick={e=>{e.stopPropagation();const ns=seats.map(x=>({...x}));ns[i].studentId=null;push(ns);}} style={{position:"absolute",top:2,right:2,border:"none",background:"none",cursor:"pointer",padding:1,color:"#ccc"}}><Ico n="x" size={11}/></button></>:<div style={{fontSize:sz>70?22:16,opacity:.15}}>📚</div>}
-                <div style={{position:"absolute",bottom:2,fontSize:8,color:"#bbb"}}>{i+1}</div>
-              </div>
-            );
-          })}
-        </div>
-        <PBtn onClick={()=>onDone(seats)}><Ico n="checkCircle" size={14}/>&nbsp;배치 완료</PBtn>
+  return <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center",width:"100%"}}>
+    <div style={{background:"white",borderRadius:18,padding:14,border:"2px solid #f0e8d0",width:166,flexShrink:0}}>
+      <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:BR}}>미배정 ({unassigned.length}명)</div>
+      {sel&&<div style={{fontSize:11,color:"#e67e22",marginBottom:8,fontWeight:600,background:"#fff8f0",borderRadius:8,padding:"4px 8px"}}>👆 빈 책상을 클릭하세요</div>}
+      <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:380,overflowY:"auto"}}>
+        {unassigned.map(s=><div key={s.id} onClick={()=>setSel(x=>x===s.id?null:s.id)} style={{display:"flex",alignItems:"center",gap:8,background:sel===s.id?Y:seatBg(s,false),border:"2px solid "+(sel===s.id?BR:"#e0d4b8"),borderRadius:12,padding:"6px 10px",cursor:"pointer",fontWeight:600,fontSize:13}}>
+          <span>{s.avatar}</span><span>{s.name}</span><span style={{fontSize:10,marginLeft:"auto",color:"#888"}}>{s.gender}</span>
+        </div>)}
+        {unassigned.length===0&&<div style={{fontSize:12,color:"#aaa",textAlign:"center",padding:8}}>모두 배정됨 🎉</div>}
       </div>
     </div>
-  );
+    <div style={{display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
+      <div style={{display:"flex",gap:7,flexWrap:"wrap",justifyContent:"center"}}>
+        <GBtn onClick={undo} style={{opacity:hIdx===0?.35:1,fontSize:12,padding:"6px 11px"}}><Ico n="undo" size={13}/> 취소</GBtn>
+        <GBtn onClick={redo} style={{opacity:hIdx===hist.length-1?.35:1,fontSize:12,padding:"6px 11px"}}><Ico n="redo" size={13}/> 다시 실행</GBtn>
+        <GBtn onClick={()=>push(makeSeats(rows,cols))} style={{fontSize:12,padding:"6px 11px",color:"#e74c3c",borderColor:"#e74c3c"}}><Ico n="rotateCcw" size={13}/> 처음부터</GBtn>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:`repeat(${cols}, ${sz}px)`,gap:6}}>
+        {seats.map((s,i)=>{
+          if(!s.hasDesk)return <div key={i} style={{width:sz,height:sz,borderRadius:14,border:"2px dashed #e0d4b8",display:"flex",alignItems:"center",justifyContent:"center",opacity:.3}}><div style={{fontSize:9,color:"#bbb"}}>{i+1}</div></div>;
+          const st=students.find(x=>x.id===s.studentId);
+          const isT=sel!==null&&!s.studentId;
+          return <div key={i} onClick={()=>clickDesk(i)} style={{width:sz,height:sz,borderRadius:14,background:isT?"#fffbe6":seatBg(st,s.locked),border:"2.5px solid "+(isT?"#ffc107":s.locked?BR:"#e0d4b8"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",position:"relative",boxShadow:"0 2px 8px rgba(66,54,48,.08)"}}>
+            {st?<><div style={{fontSize:sz>70?24:18}}>{st.avatar}</div><div style={{fontSize:sz>70?13:10,fontWeight:800,color:BR,maxWidth:sz-8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}}>{st.name}</div><button onClick={e=>{e.stopPropagation();const ns=seats.map(x=>({...x}));ns[i].studentId=null;push(ns);}} style={{position:"absolute",top:2,right:2,border:"none",background:"none",cursor:"pointer",padding:1,color:"#ccc"}}><CloseBtn onClick={()=>{}} size={10}/></button></>:<div style={{fontSize:sz>70?22:16,opacity:.15}}>📚</div>}
+            <div style={{position:"absolute",bottom:2,fontSize:8,color:"#bbb"}}>{i+1}</div>
+          </div>;
+        })}
+      </div>
+      <PBtn onClick={()=>onDone(seats)}><Ico n="checkCircle" size={14}/> 배치 완료</PBtn>
+    </div>
+  </div>;
 }
 
-// ── SeatingScreen ────────────────────────────────────────────────────
+// ── SeatingScreen ─────────────────────────────────────────────────────
 function SeatingScreen({mode,students,setStudents,seats,setSeats,rows,cols,classInfo,setClassInfo,onBack}){
-  const[sideTab,setSideTab]=useState("students");
-  const[sideOpen,setSideOpen]=useState(true);
-  const[nameInput,setNameInput]=useState("");
-  const[avoidA,setAvoidA]=useState(""),[ avoidB,setAvoidB]=useState("");
-  const[avoidPairs,setAvoidPairs]=useState([]);
-  const[msg,setMsg]=useState(null);
-  const[seatHist,setSeatHist]=useState(()=>{const v=loadLS("seatHistory",[]);return Array.isArray(v)?v:[];});
-  const[showHist,setShowHist]=useState(false);
-  const[showPrint,setShowPrint]=useState(false);
-  const[editCls,setEditCls]=useState(false);
-  const[modePanel,setModePanel]=useState(null);
-  const[addMode,setAddMode]=useState(false);
-  const[delMode,setDelMode]=useState(false);
+  const [sideTab,setSideTab]=useState("students");
+  const [sideOpen,setSideOpen]=useState(true);
+  const [nameInput,setNameInput]=useState("");
+  const [avoidA,setAvoidA]=useState(""),[ avoidB,setAvoidB]=useState("");
+  const [avoidPairs,setAvoidPairs]=useState([]);
+  const [msg,setMsg]=useState(null);
+  const [seatHist,setSeatHist]=useState(()=>{const v=loadLS("seatHistory",[]);return Array.isArray(v)?v:[];});
+  const [showHist,setShowHist]=useState(false);
+  const [showPrint,setShowPrint]=useState(false);
+  const [editCls,setEditCls]=useState(false);
+  const [modePanel,setModePanel]=useState(null);
+  const [addMode,setAddMode]=useState(false);
+  const [delMode,setDelMode]=useState(false);
   const mI=MODES.find(m=>m.id===mode);
-
-  // 사이드바 열림 여부에 따라 책상 크기 계산
   const SIDEBAR_W=246;
   const availW=sideOpen?(window.innerWidth-SIDEBAR_W-60):(window.innerWidth-60);
   const sz=Math.min(140,Math.max(80,Math.floor((availW-cols*10)/cols)));
@@ -442,471 +542,342 @@ function SeatingScreen({mode,students,setStudents,seats,setSeats,rows,cols,class
     setNameInput("");
   }
   function removeSt(sid){setStudents(p=>{const u=p.filter(x=>x.id!==sid);saveLS("students",u);return u;});setSeats(p=>p.map(x=>x.studentId===sid?{...x,studentId:null}:x));}
-  function checkViol(ss){
-    for(let i=0;i<avoidPairs.length;i++){
-      const pair=avoidPairs[i],a=pair[0],b=pair[1];
-      const iA=ss.findIndex(s=>s.studentId===a),iB=ss.findIndex(s=>s.studentId===b);
-      if(iA<0||iB<0)continue;
-      if(getNbrs(iA,cols,rows).indexOf(iB)>=0)return true;
-    }
-    return false;
-  }
+  function checkViol(ss){for(const[a,b]of avoidPairs){const iA=ss.findIndex(s=>s.studentId===a),iB=ss.findIndex(s=>s.studentId===b);if(iA<0||iB<0)continue;if(getNbrs(iA,cols,rows).includes(iB))return true;}return false;}
   function doShuffle(){
     const pool=students.filter(s=>!seats.find(x=>x.studentId===s.id&&x.locked));
     const free=seats.map((_,i)=>i).filter(i=>seats[i].hasDesk&&!seats[i].locked);
     if(pool.length>free.length){showMsg("warn","책상 부족!");return;}
     for(let t=0;t<200;t++){
       const sh=[...pool].sort(()=>Math.random()-.5);
-      const ns=seats.map(s=>({...s}));
-      free.forEach(i=>{ns[i].studentId=null;});
-      free.forEach((i,j)=>{if(j<sh.length)ns[i].studentId=sh[j].id;});
+      const ns=seats.map(s=>({...s}));free.forEach(i=>{ns[i].studentId=null;});free.forEach((i,j)=>{if(j<sh.length)ns[i].studentId=sh[j].id;});
       if(!checkViol(ns)){setSeats(ns);showMsg("success","✨ 랜덤 배치 완료!");return;}
     }
     showMsg("warn","조건을 만족하는 배치를 찾지 못했습니다.",5000);
   }
   function doSave(){
-    const e={date:new Date().toLocaleString("ko-KR"),seats:JSON.parse(JSON.stringify(seats)),students:[...students],classInfo:{...classInfo},rows:rows,cols:cols};
-    const newH=[e,...seatHist].slice(0,15);
-    setSeatHist(newH);saveLS("seatHistory",newH);showMsg("success","저장 완료!");
+    const e={date:new Date().toLocaleString("ko-KR"),seats:JSON.parse(JSON.stringify(seats)),students:[...students],classInfo:{...classInfo},rows,cols};
+    const newH=[e,...seatHist].slice(0,15);setSeatHist(newH);saveLS("seatHistory",newH);showMsg("success","저장 완료!");
   }
   function delHI(i,e){e.stopPropagation();const newH=seatHist.filter((_,j)=>j!==i);setSeatHist(newH);saveLS("seatHistory",newH);}
   function loadHI(h){setSeats(h.seats);setStudents(h.students);if(h.classInfo)setClassInfo(h.classInfo);setShowHist(false);showMsg("success","불러오기 완료!");}
   function applySeats(ns,updSt){setSeats(ns);if(updSt){setStudents(updSt);saveLS("students",updSt);}setModePanel(null);showMsg("success","배치가 반영되었습니다!");}
-  function toggleDesk(idx){
-    if(addMode)setSeats(p=>p.map((s,i)=>i===idx?{...s,hasDesk:true}:s));
-    else if(delMode)setSeats(p=>p.map((s,i)=>i===idx?{...s,hasDesk:false,studentId:null,locked:false}:s));
-  }
-  const violations=avoidPairs.filter(function(pair){
-    const a=pair[0],b=pair[1];
-    const iA=seats.findIndex(s=>s.studentId===a),iB=seats.findIndex(s=>s.studentId===b);
-    if(iA<0||iB<0)return false;
-    return getNbrs(iA,cols,rows).indexOf(iB)>=0;
-  });
+  function toggleDesk(idx){if(addMode)setSeats(p=>p.map((s,i)=>i===idx?{...s,hasDesk:true}:s));else if(delMode)setSeats(p=>p.map((s,i)=>i===idx?{...s,hasDesk:false,studentId:null,locked:false}:s));}
+  const violations=avoidPairs.filter(([a,b])=>{const iA=seats.findIndex(s=>s.studentId===a),iB=seats.findIndex(s=>s.studentId===b);if(iA<0||iB<0)return false;return getNbrs(iA,cols,rows).includes(iB);});
 
-  return(
-    <div style={{background:BG,minHeight:"100vh",color:BR}}>
-      {msg&&(
-        <div style={{position:"fixed",top:66,left:"50%",transform:"translateX(-50%)",zIndex:9999,background:msg.type==="success"?"#d4edda":"#fff3cd",border:"1.5px solid "+(msg.type==="success"?"#28a745":"#ffc107"),borderRadius:20,padding:"8px 18px",fontWeight:600,fontSize:13,color:BR,boxShadow:"0 4px 20px rgba(0,0,0,.12)",display:"flex",alignItems:"center",gap:7,whiteSpace:"nowrap"}}>
-          <Ico n={msg.type==="success"?"checkCircle":"alertTri"} size={14} color={msg.type==="success"?"#28a745":"#ffc107"}/>&nbsp;{msg.text}
+  return <div style={{background:BG,minHeight:"100vh",color:BR}}>
+    {msg&&<div style={{position:"fixed",top:66,left:"50%",transform:"translateX(-50%)",zIndex:9999,background:msg.type==="success"?"#d4edda":"#fff3cd",border:"1.5px solid "+(msg.type==="success"?"#28a745":"#ffc107"),borderRadius:20,padding:"8px 18px",fontWeight:600,fontSize:13,color:BR,boxShadow:"0 4px 20px rgba(0,0,0,.12)",display:"flex",alignItems:"center",gap:7,whiteSpace:"nowrap"}}>
+      <Ico n={msg.type==="success"?"checkCircle":"alertTri"} size={14} color={msg.type==="success"?"#28a745":"#ffc107"}/> {msg.text}
+    </div>}
+
+    {showHist&&<div className="mo">
+      <div style={{background:"white",borderRadius:22,padding:20,width:340,maxHeight:"70vh",overflow:"auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <b style={{fontSize:15}}>📋 히스토리</b><CloseBtn onClick={()=>setShowHist(false)}/>
         </div>
-      )}
-
-      {/* History Modal */}
-      {showHist&&(
-        <div className="mo">
-          <div style={{background:"white",borderRadius:22,padding:20,width:320,maxHeight:"70vh",overflow:"auto"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <b style={{fontSize:14}}>📋 히스토리</b>
-              <button style={{border:"none",background:"none",cursor:"pointer"}} onClick={()=>setShowHist(false)}><Ico n="x" size={18}/></button>
-            </div>
-            {seatHist.length===0&&<p style={{color:"#aaa",textAlign:"center",fontSize:12}}>저장된 기록이 없습니다.</p>}
-            {seatHist.map((h,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #eee",borderRadius:12,padding:"9px 10px",marginBottom:7,background:BG}}>
-                <div style={{flex:1,cursor:"pointer"}} onClick={()=>loadHI(h)}>
-                  <div style={{fontWeight:700,fontSize:12}}>{h.date}</div>
-                  <div style={{fontSize:11,color:"#888"}}>학생 {h.students.length}명 {h.classInfo?"· "+h.classInfo.grade+"학년 "+h.classInfo.classNum+"반":""}</div>
-                </div>
-                <button onClick={e=>delHI(i,e)} style={{border:"none",background:"none",cursor:"pointer",color:"#ccc",padding:3}}><Ico n="trash" size={14}/></button>
-              </div>
-            ))}
+        {seatHist.length===0&&<p style={{color:"#aaa",textAlign:"center",fontSize:13}}>저장된 기록이 없습니다.</p>}
+        {seatHist.map((h,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #eee",borderRadius:12,padding:"9px 10px",marginBottom:7,background:BG}}>
+          <div style={{flex:1,cursor:"pointer"}} onClick={()=>loadHI(h)}>
+            <div style={{fontWeight:700,fontSize:12}}>{h.date}</div>
+            <div style={{fontSize:11,color:"#888"}}>학생 {h.students.length}명 {h.classInfo?"· "+h.classInfo.grade+"학년 "+h.classInfo.classNum+"반":""}</div>
           </div>
-        </div>
-      )}
-
-      {/* Print Modal */}
-      {showPrint&&(
-        <div className="mo" style={{zIndex:2000}}>
-          <div style={{background:"white",borderRadius:24,padding:24,width:"min(95vw,820px)",maxHeight:"90vh",overflow:"auto",boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <div>
-                <div style={{fontWeight:800,fontSize:16,color:BR}}>🖨 인쇄 미리보기</div>
-                <div style={{fontSize:12,color:"#888",marginTop:2}}><b>Ctrl+P</b> (Mac: <b>⌘+P</b>) 를 눌러 인쇄하거나 PDF로 저장하세요.</div>
-              </div>
-              <button onClick={()=>setShowPrint(false)} style={{border:"none",background:"none",cursor:"pointer"}}><Ico n="x" size={22}/></button>
-            </div>
-            <div style={{textAlign:"center",padding:"12px 4px"}}>
-              <div style={{fontWeight:800,fontSize:18,color:BR,marginBottom:4}}>🦁 {classInfo.grade}학년 {classInfo.classNum}반 좌석 배치도</div>
-              <div style={{fontSize:11,color:"#888",marginBottom:12}}>{new Date().toLocaleDateString("ko-KR")} 기준</div>
-              <div style={{background:"#2d4a2d",color:"white",display:"inline-block",padding:"7px 40px",borderRadius:8,fontSize:14,fontWeight:700,letterSpacing:4,marginBottom:14}}>칠판</div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{borderCollapse:"separate",borderSpacing:5,margin:"0 auto"}}>
-                  <tbody>
-                    {Array.from({length:rows},function(_,r){return(
-                      <tr key={r}>
-                        {Array.from({length:cols},function(_,c){
-                          const idx=r*cols+c,s=seats[idx];
-                          if(!s||!s.hasDesk)return <td key={c} style={{border:"none",background:"transparent",width:90,height:82}}/>;
-                          const st=s.studentId?students.find(x=>x.id===s.studentId):null;
-                          return <td key={c} style={{width:90,height:82,border:"2px solid #423630",borderRadius:10,textAlign:"center",verticalAlign:"middle",background:seatBg(st,s.locked),padding:4}}><div style={{fontSize:22,lineHeight:1.2}}>{st?st.avatar:""}</div><div style={{fontSize:14,fontWeight:700,color:BR}}>{st?st.name:""}</div></td>;
-                        })}
-                      </tr>
-                    );})}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div style={{textAlign:"center",marginTop:16,background:BG,border:"2px solid "+Y,borderRadius:14,padding:"10px 18px",fontSize:13,color:BR,lineHeight:1.7}}>
-              <b>Ctrl+P</b> (Windows) 또는 <b>⌘+P</b> (Mac) 를 눌러 인쇄 창을 여세요.<br/>대상을 <b>"PDF로 저장"</b>으로 선택하면 PDF 파일로 저장됩니다.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="np" style={{background:Y,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"3px solid "+BR,flexWrap:"wrap",gap:7}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <button onClick={onBack} style={{...bb,background:"none",border:"none",fontSize:13,color:BR}}><Ico n="arrowLeft" size={15}/>&nbsp;홈</button>
-          <button onClick={()=>setSideOpen(v=>!v)} style={{...bb,background:sideOpen?CR:"white",border:"2px solid "+(sideOpen?BR:"#ddd"),borderRadius:12,padding:"5px 12px",fontSize:12,color:BR}}>
-            {sideOpen?"◀ 메뉴 숨기기":"▶ 메뉴 보기"}
-          </button>
-          <span style={{color:BR+"44"}}>|</span>
-          <span style={{fontSize:14,fontWeight:800,color:BR}}>{mI?mI.emoji:""}&nbsp;{mI?mI.label:""}</span>
-        </div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          {editCls?(
-            <div style={{display:"flex",alignItems:"center",gap:4}}>
-              <input value={classInfo.grade} onChange={e=>setClassInfo(p=>({...p,grade:e.target.value}))} style={{width:28,border:"1.5px solid "+BR,borderRadius:7,padding:"2px",fontSize:13,fontWeight:800,textAlign:"center",background:CR,outline:"none"}} maxLength={2}/>
-              <span style={{fontWeight:700,color:BR,fontSize:13}}>학년</span>
-              <input value={classInfo.classNum} onChange={e=>setClassInfo(p=>({...p,classNum:e.target.value}))} style={{width:28,border:"1.5px solid "+BR,borderRadius:7,padding:"2px",fontSize:13,fontWeight:800,textAlign:"center",background:CR,outline:"none"}} maxLength={2}/>
-              <span style={{fontWeight:700,color:BR,fontSize:13}}>반</span>
-              <button onClick={()=>setEditCls(false)} style={{border:"none",background:BR,color:Y,borderRadius:7,padding:"2px 8px",fontSize:12,fontWeight:700,cursor:"pointer"}}>확인</button>
-            </div>
-          ):(
-            <button onClick={()=>setEditCls(true)} style={{...bb,background:"none",border:"none",fontSize:13,color:BR,fontWeight:700}}>✏️&nbsp;{classInfo.grade}학년 {classInfo.classNum}반</button>
-          )}
-          <GBtn onClick={()=>setShowHist(true)} style={{fontSize:12,padding:"5px 10px"}}><Ico n="clock" size={12}/>&nbsp;히스토리</GBtn>
-          <GBtn onClick={doSave} style={{fontSize:12,padding:"5px 10px"}}><Ico n="save" size={12}/>&nbsp;저장</GBtn>
-          <GBtn onClick={()=>setShowPrint(true)} style={{fontSize:12,padding:"5px 10px",borderColor:"#e74c3c",color:"#e74c3c"}}><Ico n="printer" size={12}/>&nbsp;인쇄</GBtn>
-        </div>
+          <button onClick={e=>delHI(i,e)} style={{border:"none",background:"none",cursor:"pointer",color:"#ccc",padding:3}}><Ico n="trash" size={14}/></button>
+        </div>)}
       </div>
+    </div>}
 
-      {/* Body */}
-      <div style={{display:"flex",minHeight:"calc(100vh - 56px)"}}>
-        {/* Sidebar */}
-        {sideOpen&&(
-          <div className="np" style={{width:246,background:"white",borderRight:"2px solid #f0e8d0",padding:12,overflowY:"auto",flexShrink:0}}>
-            <div style={{display:"flex",background:BG,borderRadius:14,padding:3,marginBottom:11}}>
-              {[["students","👦 학생"],["layout","🏫 교실"],["avoid","🚫 기피"]].map(function(item){const id=item[0],lbl=item[1];return(
-                <button key={id} className={"tb"+(sideTab===id?" a":"")} style={{flex:1}} onClick={()=>setSideTab(id)}>{lbl}</button>
-              );})}
-            </div>
-
-            {sideTab==="students"&&(
-              <div>
-                <div style={{fontWeight:700,marginBottom:7,fontSize:13}}>학생 명단 ({students.length}명)</div>
-                <textarea value={nameInput} onChange={e=>setNameInput(e.target.value)} placeholder={"이름만 붙여넣기"} style={{...iS({height:60,resize:"vertical"})}}/>
-                <PBtn onClick={()=>parseNames(nameInput)} style={{width:"100%",justifyContent:"center",marginTop:5,marginBottom:9,fontSize:12}}><Ico n="users" size={12}/>&nbsp;명단 추가</PBtn>
-                <div style={{maxHeight:330,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
-                  {students.map(s=>(
-                    <div key={s.id} style={{display:"flex",alignItems:"center",gap:6,background:seatBg(s,false),borderRadius:9,padding:"4px 8px",border:"1.5px solid #e0d4b8"}}>
-                      <span style={{fontSize:14}}>{s.avatar}</span>
-                      <span style={{fontSize:12,flex:1,fontWeight:600}}>{s.name}</span>
-                      <select value={s.gender} onChange={e=>{const g=e.target.value;setStudents(p=>{const u=p.map(x=>x.id===s.id?{...x,gender:g,avatar:g==="남"?AV_B[Math.floor(Math.random()*AV_B.length)]:AV_G[Math.floor(Math.random()*AV_G.length)]}:x);saveLS("students",u);return u;});}} style={{fontSize:11,border:"1px solid #ddd",borderRadius:6,padding:"2px 4px",background:"white",cursor:"pointer"}}>
-                        <option value="남">남</option><option value="여">여</option>
-                      </select>
-                      <button style={{border:"none",background:"none",cursor:"pointer",color:"#ccc"}} onClick={()=>removeSt(s.id)}><Ico n="x" size={12}/></button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {sideTab==="layout"&&(
-              <div>
-                <div style={{fontWeight:700,marginBottom:9,fontSize:13}}>레이아웃 편집</div>
-                <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                  <GBtn onClick={()=>{setAddMode(!addMode);setDelMode(false);}} style={{justifyContent:"center",background:addMode?Y:"white",borderColor:addMode?BR:"#e0d4b8"}}><Ico n="plus" size={13}/>&nbsp;{addMode?"추가 모드 ON":"책상 추가"}</GBtn>
-                  <GBtn onClick={()=>{setDelMode(!delMode);setAddMode(false);}} style={{justifyContent:"center",background:delMode?"#ffd6d6":"white",borderColor:delMode?"#e74c3c":"#e0d4b8",color:delMode?"#e74c3c":BR}}><Ico n="trash" size={13}/>&nbsp;{delMode?"삭제 모드 ON":"책상 삭제"}</GBtn>
-                  <GBtn onClick={()=>{setAddMode(false);setDelMode(false);setSeats(makeSeats(rows,cols));}} style={{justifyContent:"center"}}><Ico n="rotateCcw" size={13}/>&nbsp;레이아웃 초기화</GBtn>
-                </div>
-                <div style={{background:BG,borderRadius:12,padding:9,fontSize:11,color:"#7a6a60",marginTop:10,lineHeight:1.6}}>💡 추가: 빈 칸 클릭 · 삭제: 책상 클릭 · 🔒 고정석</div>
-              </div>
-            )}
-
-            {sideTab==="avoid"&&(
-              <div>
-                <div style={{fontWeight:700,marginBottom:7,fontSize:13}}>기피 설정</div>
-                <input list="apA" value={avoidA} onChange={e=>setAvoidA(e.target.value)} placeholder="학생 A" style={{...iS({marginBottom:5})}}/>
-                <datalist id="apA">{students.map(s=><option key={s.id} value={s.name}/>)}</datalist>
-                <input list="apB" value={avoidB} onChange={e=>setAvoidB(e.target.value)} placeholder="학생 B" style={{...iS({marginBottom:7})}}/>
-                <datalist id="apB">{students.map(s=><option key={s.id} value={s.name}/>)}</datalist>
-                <PBtn onClick={()=>{
-                  const sa=students.find(s=>s.name===avoidA),sb=students.find(s=>s.name===avoidB);
-                  if(!sa||!sb||sa.id===sb.id){showMsg("warn","학생을 정확히 입력하세요.");return;}
-                  if(avoidPairs.some(p=>( p[0]===sa.id&&p[1]===sb.id)||(p[0]===sb.id&&p[1]===sa.id))){showMsg("warn","이미 등록됨");return;}
-                  setAvoidPairs(p=>[...p,[sa.id,sb.id]]);setAvoidA("");setAvoidB("");showMsg("success","기피 등록!");
-                }} style={{width:"100%",justifyContent:"center",marginBottom:9,fontSize:12}}><Ico n="plus" size={12}/>&nbsp;등록</PBtn>
-                {avoidPairs.map((p,i)=>{
-                  const a=students.find(s=>s.id===p[0]),b=students.find(s=>s.id===p[1]);
-                  if(!a||!b)return null;
-                  return(
-                    <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:CR,border:"1.5px solid "+Y,borderRadius:10,padding:"4px 9px",fontSize:11,fontWeight:600,marginBottom:4}}>
-                      {a.avatar}{a.name}↔{b.avatar}{b.name}
-                      <button style={{border:"none",background:"none",cursor:"pointer",color:"#aaa",padding:0}} onClick={()=>setAvoidPairs(p=>p.filter((_,j)=>j!==i))}><Ico n="x" size={10}/></button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Main area */}
-        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"24px 16px",overflowX:"auto",minWidth:0}}>
-          {mode!=="random"&&(
-            <div className="np" style={{marginBottom:14,width:"100%",maxWidth:700}}>
-              <button onClick={()=>setModePanel(p=>p?null:mode)} style={{...bb,background:"white",border:"2px solid "+(mI?mI.color:Y),borderRadius:14,padding:"9px 18px",fontSize:13,color:BR,width:"100%",justifyContent:"center"}}>
-                {modePanel?"▲ 패널 닫기":"▼ "+(mI?mI.label:"")+" 패널 열기"}
-              </button>
-            </div>
-          )}
-          {modePanel&&(
-            <div style={{marginBottom:18,width:"100%",maxWidth:700,background:"white",borderRadius:22,padding:18,border:"2px solid "+(mI?mI.color:Y)}}>
-              {modePanel==="number"&&<NumberMode students={students} seats={seats} rows={rows} cols={cols} onApply={ns=>applySeats(ns)}/>}
-              {modePanel==="friend"&&<FriendMode students={students} rows={rows} cols={cols} onApply={(ns,upd)=>applySeats(ns,upd)}/>}
-              {modePanel==="ladder"&&<LadderMode students={students} rows={rows} cols={cols} onApply={ns=>applySeats(ns)}/>}
-              {modePanel==="teacher"&&<TeacherMode students={students} seats={seats} setSeats={setSeats} rows={rows} cols={cols} onDone={ns=>applySeats(ns)}/>}
-            </div>
-          )}
-
-          {/* Blackboard */}
-          <div style={{background:"#2d4a2d",color:"white",borderRadius:18,padding:"14px 70px",marginBottom:20,fontWeight:900,fontSize:22,letterSpacing:6,textAlign:"center",boxShadow:"0 4px 16px rgba(0,0,0,.22)",whiteSpace:"nowrap"}}>
-            칠판 📋
-          </div>
-
-          {/* Seat grid */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat("+cols+", "+sz+"px)",gap:8}}>
-            {seats.map(function(s,i){
-              if(!s.hasDesk)return(
-                <div key={i} onClick={()=>toggleDesk(i)} style={{width:sz,height:sz,borderRadius:18,background:addMode?"rgba(254,229,0,.15)":"transparent",border:addMode?"2px dashed "+Y:"2px dashed transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:addMode?"pointer":"default"}}>
-                  {addMode&&<Ico n="plus" size={22} color={Y}/>}
-                </div>
-              );
-              const st=students.find(x=>x.id===s.studentId);
-              const emojiSz=Math.round(sz*0.3);
-              const nameSz=Math.max(13,Math.round(sz*0.16));
-              return(
-                <div key={i} className="dh" onClick={()=>delMode&&toggleDesk(i)} style={{width:sz,height:sz,borderRadius:18,background:seatBg(st,s.locked),border:"3px solid "+(s.locked?BR:"#e0d4b8"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative",boxShadow:"0 4px 14px rgba(66,54,48,.12)",cursor:delMode?"pointer":"default"}}>
-                  {st?(
-                    <>
-                      <div style={{fontSize:emojiSz,lineHeight:1.1}}>{st.avatar}</div>
-                      <div style={{fontSize:nameSz,fontWeight:800,color:BR,maxWidth:sz-12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center",marginTop:4}}>{st.name}</div>
-                    </>
-                  ):(
-                    <div style={{fontSize:Math.round(sz*0.25),opacity:.15}}>📚</div>
-                  )}
-                  <button className="np" onClick={e=>{e.stopPropagation();setSeats(p=>p.map((x,j)=>j===i?{...x,locked:!x.locked}:x));}} style={{position:"absolute",top:4,right:4,border:"none",background:"none",cursor:"pointer",padding:2,color:s.locked?BR:"#ccc"}}>
-                    <Ico n={s.locked?"lock":"unlock"} size={14}/>
-                  </button>
-                  <div className="np" style={{position:"absolute",bottom:3,fontSize:9,color:"#bbb"}}>{i+1}</div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Controls */}
-          <div className="np" style={{marginTop:24,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}}>
-            <div style={{background:"white",border:"2px solid #f0e8d0",borderRadius:12,padding:"6px 16px",fontSize:13,color:"#888"}}>
-              <b style={{color:BR}}>{students.length}</b>명 (남 {students.filter(s=>s.gender==="남").length} · 여 {students.filter(s=>s.gender==="여").length}) · {seats.filter(s=>s.studentId).length}/{seats.filter(s=>s.hasDesk).length} 배정
-            </div>
-            {mode==="random"&&<PBtn onClick={doShuffle}><Ico n="shuffle" size={17} sw={2.5}/>&nbsp;랜덤 섞기 🎲</PBtn>}
-          </div>
-          {violations.length>0&&(
-            <div className="np" style={{marginTop:10,background:"#fff3cd",border:"2px solid #ffc107",borderRadius:12,padding:"8px 14px",fontSize:12,color:BR,maxWidth:480,textAlign:"center"}}>
-              ⚠️ 기피 위반 {violations.length}쌍: {violations.map(function(pair){const sA=students.find(s=>s.id===pair[0]),sB=students.find(s=>s.id===pair[1]);return sA&&sB?sA.name+"↔"+sB.name:"";}).filter(Boolean).join(", ")}
-            </div>
-          )}
+    {showPrint&&<div className="mo" style={{zIndex:2000}}>
+      <div style={{background:"white",borderRadius:24,padding:24,width:"min(95vw,820px)",maxHeight:"90vh",overflow:"auto",boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div><div style={{fontWeight:800,fontSize:16,color:BR}}>🖨 인쇄 미리보기</div><div style={{fontSize:12,color:"#888",marginTop:2}}><b>Ctrl+P</b> (Mac: <b>⌘+P</b>) 를 눌러 인쇄하거나 PDF로 저장하세요.</div></div>
+          <CloseBtn onClick={()=>setShowPrint(false)}/>
         </div>
+        <div style={{textAlign:"center",padding:"12px 4px"}}>
+          <div style={{fontWeight:800,fontSize:18,color:BR,marginBottom:4}}>🦁 {classInfo.grade}학년 {classInfo.classNum}반 좌석 배치도</div>
+          <div style={{fontSize:11,color:"#888",marginBottom:12}}>{new Date().toLocaleDateString("ko-KR")} 기준</div>
+          <div style={{background:"#2d4a2d",color:"white",display:"inline-block",padding:"7px 40px",borderRadius:8,fontSize:14,fontWeight:700,letterSpacing:4,marginBottom:14}}>칠판</div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{borderCollapse:"separate",borderSpacing:5,margin:"0 auto"}}>
+              <tbody>{Array.from({length:rows},(_,r)=><tr key={r}>{Array.from({length:cols},(_,c)=>{const idx=r*cols+c,s=seats[idx];if(!s||!s.hasDesk)return <td key={c} style={{border:"none",background:"transparent",width:90,height:82}}/>;const st=s.studentId?students.find(x=>x.id===s.studentId):null;return <td key={c} style={{width:90,height:82,border:"2px solid #423630",borderRadius:10,textAlign:"center",verticalAlign:"middle",background:seatBg(st,s.locked),padding:4}}><div style={{fontSize:22,lineHeight:1.2}}>{st?st.avatar:""}</div><div style={{fontSize:14,fontWeight:700,color:BR}}>{st?st.name:""}</div></td>;})}</tr>)}</tbody>
+            </table>
+          </div>
+        </div>
+        <div style={{textAlign:"center",marginTop:16,background:BG,border:"2px solid "+Y,borderRadius:14,padding:"10px 18px",fontSize:13,color:BR,lineHeight:1.7}}><b>Ctrl+P</b> (Windows) 또는 <b>⌘+P</b> (Mac) 를 눌러 인쇄 창을 여세요.<br/>대상을 <b>"PDF로 저장"</b>으로 선택하면 PDF 파일로 저장됩니다.</div>
+      </div>
+    </div>}
+
+    <div className="np" style={{background:Y,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"3px solid "+BR,flexWrap:"wrap",gap:7}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <button onClick={onBack} style={{...bb,background:"none",border:"none",fontSize:13,color:BR}}><Ico n="arrowLeft" size={15}/> 홈</button>
+        <button onClick={()=>setSideOpen(v=>!v)} style={{...bb,background:sideOpen?CR:"white",border:"2px solid "+(sideOpen?BR:"#ddd"),borderRadius:12,padding:"5px 12px",fontSize:12,color:BR}}>{sideOpen?"◀ 메뉴 숨기기":"▶ 메뉴 보기"}</button>
+        <span style={{color:BR+"44"}}>|</span>
+        <span style={{fontSize:14,fontWeight:800,color:BR}}>{mI?.emoji} {mI?.label}</span>
+      </div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+        {editCls
+          ?<div style={{display:"flex",alignItems:"center",gap:4}}>
+            <input value={classInfo.grade} onChange={e=>setClassInfo(p=>({...p,grade:e.target.value}))} style={{width:28,border:"1.5px solid "+BR,borderRadius:7,padding:"2px",fontSize:13,fontWeight:800,textAlign:"center",background:CR,outline:"none"}} maxLength={2}/>
+            <span style={{fontWeight:700,color:BR,fontSize:13}}>학년</span>
+            <input value={classInfo.classNum} onChange={e=>setClassInfo(p=>({...p,classNum:e.target.value}))} style={{width:28,border:"1.5px solid "+BR,borderRadius:7,padding:"2px",fontSize:13,fontWeight:800,textAlign:"center",background:CR,outline:"none"}} maxLength={2}/>
+            <span style={{fontWeight:700,color:BR,fontSize:13}}>반</span>
+            <button onClick={()=>setEditCls(false)} style={{border:"none",background:BR,color:Y,borderRadius:7,padding:"2px 8px",fontSize:12,fontWeight:700,cursor:"pointer"}}>확인</button>
+          </div>
+          :<button onClick={()=>setEditCls(true)} style={{...bb,background:"none",border:"none",fontSize:13,color:BR,fontWeight:700}}>✏️ {classInfo.grade}학년 {classInfo.classNum}반</button>}
+        <GBtn onClick={()=>setShowHist(true)} style={{fontSize:12,padding:"5px 10px"}}><Ico n="clock" size={12}/> 히스토리</GBtn>
+        <GBtn onClick={doSave} style={{fontSize:12,padding:"5px 10px"}}><Ico n="save" size={12}/> 저장</GBtn>
+        <GBtn onClick={()=>setShowPrint(true)} style={{fontSize:12,padding:"5px 10px",borderColor:"#e74c3c",color:"#e74c3c"}}><Ico n="printer" size={12}/> 인쇄</GBtn>
       </div>
     </div>
-  );
+
+    <div style={{display:"flex",minHeight:"calc(100vh - 56px)"}}>
+      {sideOpen&&<div className="np" style={{width:246,background:"white",borderRight:"2px solid #f0e8d0",padding:12,overflowY:"auto",flexShrink:0}}>
+        <div style={{display:"flex",background:BG,borderRadius:14,padding:3,marginBottom:11}}>
+          {[["students","👦 학생"],["layout","🏫 교실"],["avoid","🚫 기피"]].map(([id,lbl])=>
+            <button key={id} className={"tb"+(sideTab===id?" a":"")} style={{flex:1}} onClick={()=>setSideTab(id)}>{lbl}</button>
+          )}
+        </div>
+        {sideTab==="students"&&<>
+          <div style={{fontWeight:700,marginBottom:7,fontSize:13}}>학생 명단 ({students.length}명)</div>
+          <textarea value={nameInput} onChange={e=>setNameInput(e.target.value)} placeholder={"이름만 붙여넣기"} style={{...iS({height:60,resize:"vertical"})}}/>
+          <PBtn onClick={()=>parseNames(nameInput)} style={{width:"100%",justifyContent:"center",marginTop:5,marginBottom:9,fontSize:12}}><Ico n="users" size={12}/> 명단 추가</PBtn>
+          <div style={{maxHeight:330,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+            {students.map(s=><div key={s.id} style={{display:"flex",alignItems:"center",gap:6,background:seatBg(s,false),borderRadius:9,padding:"4px 8px",border:"1.5px solid #e0d4b8"}}>
+              <span style={{fontSize:14}}>{s.avatar}</span>
+              <span style={{fontSize:12,flex:1,fontWeight:600}}>{s.name}</span>
+              <select value={s.gender} onChange={e=>{const g=e.target.value;setStudents(p=>{const u=p.map(x=>x.id===s.id?{...x,gender:g,avatar:g==="남"?AV_B[Math.floor(Math.random()*AV_B.length)]:AV_G[Math.floor(Math.random()*AV_G.length)]}:x);saveLS("students",u);return u;});}} style={{fontSize:11,border:"1px solid #ddd",borderRadius:6,padding:"2px 4px",background:"white",cursor:"pointer"}}>
+                <option value="남">남</option><option value="여">여</option>
+              </select>
+              <button style={{border:"none",background:"none",cursor:"pointer",color:"#ccc"}} onClick={()=>removeSt(s.id)}><CloseBtn onClick={()=>removeSt(s.id)} size={11}/></button>
+            </div>)}
+          </div>
+        </>}
+        {sideTab==="layout"&&<>
+          <div style={{fontWeight:700,marginBottom:9,fontSize:13}}>레이아웃 편집</div>
+          <div style={{display:"flex",flexDirection:"column",gap:7}}>
+            <GBtn onClick={()=>{setAddMode(!addMode);setDelMode(false);}} style={{justifyContent:"center",background:addMode?Y:"white",borderColor:addMode?BR:"#e0d4b8"}}><Ico n="plus" size={13}/> {addMode?"추가 모드 ON":"책상 추가"}</GBtn>
+            <GBtn onClick={()=>{setDelMode(!delMode);setAddMode(false);}} style={{justifyContent:"center",background:delMode?"#ffd6d6":"white",borderColor:delMode?"#e74c3c":"#e0d4b8",color:delMode?"#e74c3c":BR}}><Ico n="trash" size={13}/> {delMode?"삭제 모드 ON":"책상 삭제"}</GBtn>
+            <GBtn onClick={()=>{setAddMode(false);setDelMode(false);setSeats(makeSeats(rows,cols));}} style={{justifyContent:"center"}}><Ico n="rotateCcw" size={13}/> 레이아웃 초기화</GBtn>
+          </div>
+          <div style={{background:BG,borderRadius:12,padding:9,fontSize:11,color:"#7a6a60",marginTop:10,lineHeight:1.6}}>💡 추가: 빈 칸 클릭 · 삭제: 책상 클릭 · 🔒 고정석</div>
+        </>}
+        {sideTab==="avoid"&&<>
+          <div style={{fontWeight:700,marginBottom:7,fontSize:13}}>기피 설정</div>
+          <input list="apA" value={avoidA} onChange={e=>setAvoidA(e.target.value)} placeholder="학생 A" style={{...iS({marginBottom:5})}}/>
+          <datalist id="apA">{students.map(s=><option key={s.id} value={s.name}/>)}</datalist>
+          <input list="apB" value={avoidB} onChange={e=>setAvoidB(e.target.value)} placeholder="학생 B" style={{...iS({marginBottom:7})}}/>
+          <datalist id="apB">{students.map(s=><option key={s.id} value={s.name}/>)}</datalist>
+          <PBtn onClick={()=>{
+            const sa=students.find(s=>s.name===avoidA),sb=students.find(s=>s.name===avoidB);
+            if(!sa||!sb||sa.id===sb.id){showMsg("warn","학생을 정확히 입력하세요.");return;}
+            if(avoidPairs.some(p=>(p[0]===sa.id&&p[1]===sb.id)||(p[0]===sb.id&&p[1]===sa.id))){showMsg("warn","이미 등록됨");return;}
+            setAvoidPairs(p=>[...p,[sa.id,sb.id]]);setAvoidA("");setAvoidB("");showMsg("success","기피 등록!");
+          }} style={{width:"100%",justifyContent:"center",marginBottom:9,fontSize:12}}><Ico n="plus" size={12}/> 등록</PBtn>
+          {avoidPairs.map((p,i)=>{const a=students.find(s=>s.id===p[0]),b=students.find(s=>s.id===p[1]);if(!a||!b)return null;return <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:CR,border:"1.5px solid "+Y,borderRadius:10,padding:"4px 9px",fontSize:11,fontWeight:600,marginBottom:4}}>{a.avatar}{a.name}↔{b.avatar}{b.name}<button style={{border:"none",background:"none",cursor:"pointer",color:"#aaa",padding:0}} onClick={()=>setAvoidPairs(p=>p.filter((_,j)=>j!==i))}><Ico n="trash" size={10}/></button></div>;})}
+        </>}
+      </div>}
+
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"24px 16px",overflowX:"auto",minWidth:0}}>
+        {mode!=="random"&&<div className="np" style={{marginBottom:14,width:"100%",maxWidth:700}}>
+          <button onClick={()=>setModePanel(p=>p?null:mode)} style={{...bb,background:"white",border:"2px solid "+(mI?.color||Y),borderRadius:14,padding:"9px 18px",fontSize:13,color:BR,width:"100%",justifyContent:"center"}}>
+            {modePanel?"▲ 패널 닫기":"▼ "+(mI?.label||"")+" 패널 열기"}
+          </button>
+        </div>}
+        {modePanel&&<div style={{marginBottom:18,width:"100%",maxWidth:700,background:"white",borderRadius:22,padding:18,border:"2px solid "+(mI?.color||Y)}}>
+          {modePanel==="number"&&<NumberMode students={students} seats={seats} rows={rows} cols={cols} onApply={ns=>applySeats(ns)}/>}
+          {modePanel==="friend"&&<FriendMode students={students} rows={rows} cols={cols} onApply={(ns,upd)=>applySeats(ns,upd)}/>}
+          {modePanel==="group"&&<GroupMode students={students} onDone={()=>{setModePanel(null);showMsg("success","모둠 배치가 완료되었습니다!");}}/>}
+          {modePanel==="ladder"&&<LadderMode students={students} rows={rows} cols={cols} onApply={ns=>applySeats(ns)}/>}
+          {modePanel==="teacher"&&<TeacherMode students={students} seats={seats} setSeats={setSeats} rows={rows} cols={cols} onDone={ns=>applySeats(ns)}/>}
+        </div>}
+
+        <div style={{background:"#2d4a2d",color:"white",borderRadius:18,padding:"14px 70px",marginBottom:20,fontWeight:900,fontSize:22,letterSpacing:6,textAlign:"center",boxShadow:"0 4px 16px rgba(0,0,0,.22)",whiteSpace:"nowrap"}}>칠판 📋</div>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${cols}, ${sz}px)`,gap:8}}>
+          {seats.map((s,i)=>{
+            if(!s.hasDesk)return <div key={i} onClick={()=>toggleDesk(i)} style={{width:sz,height:sz,borderRadius:18,background:addMode?"rgba(254,229,0,.15)":"transparent",border:addMode?"2px dashed "+Y:"2px dashed transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:addMode?"pointer":"default"}}>{addMode&&<Ico n="plus" size={22} color={Y}/>}</div>;
+            const st=students.find(x=>x.id===s.studentId);
+            const emojiSz=Math.round(sz*0.3),nameSz=Math.max(13,Math.round(sz*0.16));
+            return <div key={i} className="dh" onClick={()=>delMode&&toggleDesk(i)} style={{width:sz,height:sz,borderRadius:18,background:seatBg(st,s.locked),border:"3px solid "+(s.locked?BR:"#e0d4b8"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative",boxShadow:"0 4px 14px rgba(66,54,48,.12)",cursor:delMode?"pointer":"default"}}>
+              {st?<><div style={{fontSize:emojiSz,lineHeight:1.1}}>{st.avatar}</div><div style={{fontSize:nameSz,fontWeight:800,color:BR,maxWidth:sz-12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center",marginTop:4}}>{st.name}</div></>:<div style={{fontSize:Math.round(sz*0.25),opacity:.15}}>📚</div>}
+              <button className="np" onClick={e=>{e.stopPropagation();setSeats(p=>p.map((x,j)=>j===i?{...x,locked:!x.locked}:x));}} style={{position:"absolute",top:4,right:4,border:"none",background:"none",cursor:"pointer",padding:2,color:s.locked?BR:"#ccc"}}><Ico n={s.locked?"lock":"unlock"} size={14}/></button>
+              <div className="np" style={{position:"absolute",bottom:3,fontSize:9,color:"#bbb"}}>{i+1}</div>
+            </div>;
+          })}
+        </div>
+        <div className="np" style={{marginTop:24,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}}>
+          <div style={{background:"white",border:"2px solid #f0e8d0",borderRadius:12,padding:"6px 16px",fontSize:13,color:"#888"}}>
+            <b style={{color:BR}}>{students.length}</b>명 (남 {students.filter(s=>s.gender==="남").length} · 여 {students.filter(s=>s.gender==="여").length}) · {seats.filter(s=>s.studentId).length}/{seats.filter(s=>s.hasDesk).length} 배정
+          </div>
+          {mode==="random"&&<PBtn onClick={doShuffle}><Ico n="shuffle" size={17} sw={2.5}/> 랜덤 섞기 🎲</PBtn>}
+        </div>
+        {violations.length>0&&<div className="np" style={{marginTop:10,background:"#fff3cd",border:"2px solid #ffc107",borderRadius:12,padding:"8px 14px",fontSize:12,color:BR,maxWidth:480,textAlign:"center"}}>⚠️ 기피 위반 {violations.length}쌍: {violations.map(([a,b])=>{const sA=students.find(s=>s.id===a),sB=students.find(s=>s.id===b);return sA&&sB?sA.name+"↔"+sB.name:"";}).filter(Boolean).join(", ")}</div>}
+      </div>
+    </div>
+  </div>;
 }
 
-// ── Home ─────────────────────────────────────────────────────────────
+// ── App ───────────────────────────────────────────────────────────────
 function App(){
-  const[screen,setScreen]=useState("home");
-  const[activeMode,setActiveMode]=useState("random");
-  const[students,setStudents]=useState(()=>loadLS("students",[]));
-  const[classInfo,setClassInfo]=useState({grade:"3",classNum:"2"});
-  const[editCls,setEditCls]=useState(false);
-  const[gridRows,setGridRows]=useState(4);
-  const[gridCols,setGridCols]=useState(6);
-  const[pendingRows,setPendingRows]=useState(4);
-  const[pendingCols,setPendingCols]=useState(6);
-  const[seats,setSeats]=useState(()=>makeSeats(4,6));
-  const[showGrid,setShowGrid]=useState(false);
-  const[showUpload,setShowUpload]=useState(false);
-  const[showHomeHist,setShowHomeHist]=useState(false);
-  const[homeHist,setHomeHist]=useState(()=>{const v=loadLS("seatHistory",[]);return Array.isArray(v)?v:[];});
-  const[uploadRows,setUploadRows]=useState([]);
-  const[uploadMsg,setUploadMsg]=useState("");
-  const[rawText,setRawText]=useState("");
+  const [screen,setScreen]=useState("home");
+  const [activeMode,setActiveMode]=useState("random");
+  const [students,setStudents]=useState(()=>loadLS("students",[]));
+  const [classInfo,setClassInfo]=useState(()=>loadLS("classInfo",{grade:"5",classNum:"5"}));
+  const [editCls,setEditCls]=useState(false);
+  const [gridRows,setGridRows]=useState(()=>loadLS("gridRows",4));
+  const [gridCols,setGridCols]=useState(()=>loadLS("gridCols",6));
+  const [pendingRows,setPendingRows]=useState(()=>loadLS("gridRows",4));
+  const [pendingCols,setPendingCols]=useState(()=>loadLS("gridCols",6));
+  const [seats,setSeats]=useState(()=>{const r=loadLS("gridRows",4),c=loadLS("gridCols",6);const saved=loadLS("lastSeats",null);if(saved&&Array.isArray(saved)&&saved.length===r*c)return saved;return makeSeats(r,c);});
+  const [showGrid,setShowGrid]=useState(false);
+  const [showUpload,setShowUpload]=useState(false);
+  const [showHomeHist,setShowHomeHist]=useState(false);
+  const [homeHist,setHomeHist]=useState(()=>{const v=loadLS("seatHistory",[]);return Array.isArray(v)?v:[];});
+  const [uploadRows,setUploadRows]=useState([]);
+  const [uploadMsg,setUploadMsg]=useState("");
+  const [rawText,setRawText]=useState("");
   const fileRef=useRef(null);
+  const importRef=useRef(null);
+
+  useEffect(()=>{saveLS("classInfo",classInfo);},[classInfo]);
+  useEffect(()=>{saveLS("gridRows",gridRows);},[gridRows]);
+  useEffect(()=>{saveLS("gridCols",gridCols);},[gridCols]);
+  useEffect(()=>{saveLS("lastSeats",seats);},[seats]);
+  useEffect(()=>{saveLS("students",students);},[students]);
 
   function applyGrid(){const r=Math.max(1,Math.min(10,parseInt(pendingRows)||4)),c=Math.max(1,Math.min(10,parseInt(pendingCols)||6));setGridRows(r);setGridCols(c);setSeats(makeSeats(r,c));setShowGrid(false);}
   function parseUpload(text){
-    const lines=text.trim().split(/[\n\r]+/).filter(Boolean);
-    const rows=[];
-    for(let i=0;i<lines.length;i++){
-      const parts=lines[i].split(/[\t,\s]+/).map(s=>s.trim()).filter(Boolean);
-      let gender="남",name="";
-      const gW=["남","여","m","f","boy","girl","male","female"];
-      if(parts.length>=2&&gW.indexOf(parts[0].toLowerCase())>=0){
-        gender=["여","f","girl","female"].indexOf(parts[0].toLowerCase())>=0?"여":"남";
-        name=parts.slice(1).join(" ");
-      }else name=parts.join(" ");
-      if(name&&isNaN(Number(name)))rows.push({gender:gender,name:name});
-    }
+    const lines=text.trim().split(/[\n\r]+/).filter(Boolean);const rows=[];
+    for(const line of lines){const parts=line.split(/[\t,\s]+/).map(s=>s.trim()).filter(Boolean);let gender="남",name="";const gW=["남","여","m","f","boy","girl","male","female"];if(parts.length>=2&&gW.includes(parts[0].toLowerCase())){gender=["여","f","girl","female"].includes(parts[0].toLowerCase())?"여":"남";name=parts.slice(1).join(" ");}else name=parts.join(" ");if(name&&isNaN(Number(name)))rows.push({gender,name});}
     setUploadRows(rows);
   }
   function handleFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setRawText(ev.target.result);parseUpload(ev.target.result);};r.readAsText(f);}
   function commitUpload(){
     const ex=students.map(s=>s.name);
-    const ns=uploadRows.filter(r=>ex.indexOf(r.name)<0).map((r,i)=>({id:Date.now()+i,name:r.name,gender:r.gender,avatar:r.gender==="남"?AV_B[(students.length+i)%AV_B.length]:AV_G[(students.length+i)%AV_G.length]}));
+    const ns=uploadRows.filter(r=>!ex.includes(r.name)).map((r,i)=>({id:Date.now()+i,name:r.name,gender:r.gender,avatar:r.gender==="남"?AV_B[(students.length+i)%AV_B.length]:AV_G[(students.length+i)%AV_G.length]}));
     if(ns.length){setStudents(p=>{const u=[...p,...ns];saveLS("students",u);return u;});setUploadMsg("✅ "+ns.length+"명 추가 완료!");}
     else setUploadMsg("ℹ️ 새로 추가할 학생이 없습니다.");
+  }
+  function exportData(){
+    const data={classInfo,gridRows,gridCols,seats,students,history:homeHist,exportedAt:new Date().toLocaleString("ko-KR")};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=classInfo.grade+"학년"+classInfo.classNum+"반_짝꿍찾기.json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+  }
+  function handleImport(e){
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=ev=>{
+      try{const data=JSON.parse(ev.target.result);
+        if(data.classInfo)setClassInfo(data.classInfo);
+        if(data.gridRows){setGridRows(data.gridRows);setPendingRows(data.gridRows);}
+        if(data.gridCols){setGridCols(data.gridCols);setPendingCols(data.gridCols);}
+        if(data.students&&Array.isArray(data.students))setStudents(data.students);
+        if(data.seats&&Array.isArray(data.seats))setSeats(data.seats);
+        if(data.history&&Array.isArray(data.history)){setHomeHist(data.history);saveLS("seatHistory",data.history);}
+        alert("✅ 불러오기 완료!\n학생 "+(data.students?.length||0)+"명");
+      }catch{alert("❌ 파일을 읽을 수 없습니다.");}
+    };r.readAsText(f);e.target.value="";
   }
   function delHomeHI(i,e){e.stopPropagation();const newH=homeHist.filter((_,j)=>j!==i);setHomeHist(newH);saveLS("seatHistory",newH);}
 
   if(screen==="seating"){
-    return(
-      <SeatingScreen key={activeMode} mode={activeMode} students={students} setStudents={setStudents} seats={seats} setSeats={setSeats} rows={gridRows} cols={gridCols} classInfo={classInfo} setClassInfo={setClassInfo} onBack={()=>setScreen("home")}/>
-    );
+    return <SeatingScreen key={activeMode} mode={activeMode} students={students} setStudents={setStudents} seats={seats} setSeats={setSeats} rows={gridRows} cols={gridCols} classInfo={classInfo} setClassInfo={setClassInfo} onBack={()=>setScreen("home")}/>;
   }
 
-  return(
-    <div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
-
-      {/* Grid Modal */}
-      {showGrid&&(
-        <div className="mo">
-          <div style={{background:"white",borderRadius:24,padding:28,width:300,boxShadow:"0 8px 40px rgba(0,0,0,.18)"}}>
-            <div style={{fontWeight:800,fontSize:17,color:BR,marginBottom:18,textAlign:"center"}}>🏫 교실 책상 설정</div>
-            {[["행 (앞뒤 줄 수)",pendingRows,setPendingRows],["열 (좌우 줄 수)",pendingCols,setPendingCols]].map(function(item){
-              const lbl=item[0],val=item[1],setVal=item[2];
-              return(
-                <div key={lbl} style={{marginBottom:14}}>
-                  <label style={{fontSize:13,fontWeight:700,color:BR,display:"block",marginBottom:6}}>{lbl}</label>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <button onClick={()=>setVal(v=>Math.max(1,v-1))} style={{...bb,background:Y,border:"2px solid "+BR,borderRadius:12,width:36,height:36,justifyContent:"center",fontSize:18}}>−</button>
-                    <input type="number" value={val} onChange={e=>setVal(parseInt(e.target.value)||1)} min={1} max={10} style={{...iS({width:58,textAlign:"center",fontSize:18,fontWeight:800})}}/>
-                    <button onClick={()=>setVal(v=>Math.min(10,v+1))} style={{...bb,background:Y,border:"2px solid "+BR,borderRadius:12,width:36,height:36,justifyContent:"center",fontSize:18}}>+</button>
-                  </div>
-                </div>
-              );
-            })}
-            <div style={{background:BG,borderRadius:14,padding:10,textAlign:"center",marginBottom:16,fontSize:13,color:BR}}>총 <b style={{fontSize:18}}>{pendingRows*pendingCols}</b>석 ({pendingRows}행 × {pendingCols}열)</div>
-            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-              <GBtn onClick={()=>setShowGrid(false)}>취소</GBtn>
-              <PBtn onClick={applyGrid}><Ico n="checkCircle" size={14}/>&nbsp;적용하기</PBtn>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Upload Modal */}
-      {showUpload&&(
-        <div className="mo">
-          <div style={{background:"white",borderRadius:24,padding:24,width:400,maxHeight:"80vh",overflow:"auto",boxShadow:"0 8px 40px rgba(0,0,0,.18)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <b style={{fontSize:16,color:BR}}>👦 학생 명단 업로드</b>
-              <button style={{border:"none",background:"none",cursor:"pointer"}} onClick={()=>{setShowUpload(false);setUploadMsg("");setUploadRows([]);setRawText("");}}><Ico n="x" size={18}/></button>
-            </div>
-            <div style={{fontSize:12,color:"#888",marginBottom:12,background:BG,borderRadius:10,padding:10,lineHeight:1.8}}>
-              📋 형식: <b>성별 이름</b> (한 줄에 한 명)<br/>예) <code>남 홍길동</code> · <code>여 김영희</code>
-            </div>
-            <input ref={fileRef} type="file" accept=".csv,.txt,.tsv" style={{display:"none"}} onChange={handleFile}/>
-            <GBtn onClick={()=>fileRef.current.click()} style={{width:"100%",justifyContent:"center",marginBottom:10}}><Ico n="upload" size={14}/>&nbsp;파일 선택</GBtn>
-            <textarea value={rawText} onChange={e=>{setRawText(e.target.value);parseUpload(e.target.value);}} placeholder={"남 홍길동\n여 김영희\n남 이철수"} style={{...iS({height:100,resize:"vertical"}),marginBottom:10}}/>
-            {uploadRows.length>0&&(
-              <div style={{marginBottom:10}}>
-                <div style={{fontSize:12,fontWeight:700,color:BR,marginBottom:6}}>파싱 결과 ({uploadRows.length}명)</div>
-                <div style={{maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
-                  {uploadRows.map(function(r,i){return(
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:r.gender==="남"?B_BOY:B_GIRL,borderRadius:9,padding:"4px 10px",border:"1.5px solid #e0d4b8"}}>
-                      <select value={r.gender} onChange={e=>{const u=[...uploadRows];u[i]={...u[i],gender:e.target.value};setUploadRows(u);}} style={{fontSize:11,border:"1px solid #ddd",borderRadius:6,padding:"2px 4px",background:"white",cursor:"pointer"}}><option value="남">남</option><option value="여">여</option></select>
-                      <span style={{fontSize:13,fontWeight:600,color:BR}}>{r.name}</span>
-                      <button onClick={()=>setUploadRows(u=>u.filter((_,j)=>j!==i))} style={{border:"none",background:"none",cursor:"pointer",color:"#ccc",marginLeft:"auto"}}><Ico n="x" size={11}/></button>
-                    </div>
-                  );})}
-                </div>
-              </div>
-            )}
-            {uploadMsg&&<div style={{fontSize:13,fontWeight:600,color:uploadMsg.startsWith("✅")?"#27ae60":"#888",marginBottom:8}}>{uploadMsg}</div>}
-            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-              <GBtn onClick={()=>{setShowUpload(false);setUploadMsg("");setUploadRows([]);setRawText("");}}>닫기</GBtn>
-              <PBtn onClick={commitUpload} style={{opacity:uploadRows.length===0?.5:1}}><Ico n="users" size={14}/>&nbsp;{uploadRows.length}명 추가하기</PBtn>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Home History Modal */}
-      {showHomeHist&&(
-        <div className="mo">
-          <div style={{background:"white",borderRadius:22,padding:20,width:320,maxHeight:"65vh",overflow:"auto"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <b style={{fontSize:14,color:BR}}>📋 저장된 히스토리</b>
-              <button style={{border:"none",background:"none",cursor:"pointer"}} onClick={()=>setShowHomeHist(false)}><Ico n="x" size={17}/></button>
-            </div>
-            {homeHist.length===0&&<p style={{color:"#aaa",textAlign:"center",fontSize:12}}>저장된 기록이 없습니다.</p>}
-            {homeHist.map(function(h,i){return(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #eee",borderRadius:12,padding:"9px 10px",marginBottom:7,background:BG}}>
-                <div style={{flex:1,cursor:"pointer"}} onClick={()=>{if(h.seats)setSeats(h.seats);if(h.students)setStudents(h.students);if(h.classInfo)setClassInfo(h.classInfo);setShowHomeHist(false);}}>
-                  <div style={{fontWeight:700,fontSize:12}}>{h.date}</div>
-                  <div style={{fontSize:11,color:"#888"}}>학생 {h.students&&h.students.length||0}명 {h.classInfo?"· "+h.classInfo.grade+"학년 "+h.classInfo.classNum+"반":""}</div>
-                </div>
-                <button onClick={e=>delHomeHI(i,e)} style={{border:"none",background:"none",cursor:"pointer",color:"#ccc",padding:3}}><Ico n="trash" size={14}/></button>
-              </div>
-            );})}
-          </div>
-        </div>
-      )}
-
-      {/* Title */}
-      <div className="bounce" style={{fontSize:58,marginBottom:8}}>🦁</div>
-      <div style={{fontSize:30,fontWeight:900,color:BR,letterSpacing:-1,lineHeight:1.15,textAlign:"center",marginBottom:8}}>몽글몽글<br/>짝꿍 찾기</div>
-
-      {editCls?(
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:20}}>
-          <input value={classInfo.grade} onChange={e=>setClassInfo(p=>({...p,grade:e.target.value}))} style={{width:32,border:"2px solid "+BR,borderRadius:8,padding:"4px",fontSize:14,fontWeight:800,textAlign:"center",background:CR}} maxLength={2}/>
-          <span style={{fontWeight:800,color:BR,fontSize:14}}>학년</span>
-          <input value={classInfo.classNum} onChange={e=>setClassInfo(p=>({...p,classNum:e.target.value}))} style={{width:32,border:"2px solid "+BR,borderRadius:8,padding:"4px",fontSize:14,fontWeight:800,textAlign:"center",background:CR}} maxLength={2}/>
-          <span style={{fontWeight:800,color:BR,fontSize:14}}>반</span>
-          <button onClick={()=>setEditCls(false)} style={{border:"none",background:BR,color:Y,borderRadius:8,padding:"4px 11px",fontSize:12,fontWeight:700,cursor:"pointer"}}>확인</button>
-        </div>
-      ):(
-        <div onClick={()=>setEditCls(true)} style={{marginBottom:20,display:"inline-flex",alignItems:"center",gap:5,background:Y,borderRadius:20,padding:"6px 18px",fontWeight:800,fontSize:15,color:BR,cursor:"pointer",border:"2px solid "+BR}}>
-          ✏️&nbsp;{classInfo.grade}학년 {classInfo.classNum}반
-        </div>
-      )}
-
-      <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap",justifyContent:"center"}}>
-        <button onClick={()=>{setPendingRows(gridRows);setPendingCols(gridCols);setShowGrid(true);}} style={{...bb,background:"white",border:"2px solid #e0d4b8",borderRadius:16,padding:"8px 14px",fontSize:13,color:BR}}><Ico n="settings" size={14}/>&nbsp;교실 배치 ({gridRows}행×{gridCols}열)</button>
-        <button onClick={()=>setShowUpload(true)} style={{...bb,background:"white",border:"2px solid #e0d4b8",borderRadius:16,padding:"8px 14px",fontSize:13,color:BR}}><Ico n="upload" size={14}/>&nbsp;명단 업로드 ({students.length}명)</button>
-        <button onClick={()=>setShowHomeHist(true)} style={{...bb,background:"white",border:"2px solid #e0d4b8",borderRadius:16,padding:"8px 14px",fontSize:13,color:BR}}><Ico n="clock" size={14}/>&nbsp;히스토리</button>
+  return <div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
+    {showGrid&&<div className="mo"><div style={{background:"white",borderRadius:24,padding:28,width:320,boxShadow:"0 8px 40px rgba(0,0,0,.18)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div style={{fontWeight:800,fontSize:17,color:BR}}>🏫 교실 책상 설정</div><CloseBtn onClick={()=>setShowGrid(false)}/>
       </div>
+      {[["행 (앞뒤 줄 수)",pendingRows,setPendingRows],["열 (좌우 줄 수)",pendingCols,setPendingCols]].map(([lbl,val,setVal])=><div key={lbl} style={{marginBottom:16}}>
+        <label style={{fontSize:13,fontWeight:700,color:BR,display:"block",marginBottom:8}}>{lbl}</label>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <button onClick={()=>setVal(v=>Math.max(1,v-1))} style={{...bb,background:Y,border:"2px solid "+BR,borderRadius:12,width:38,height:38,justifyContent:"center",fontSize:20}}>−</button>
+          <input type="number" value={val} onChange={e=>setVal(parseInt(e.target.value)||1)} min={1} max={10} style={{...iS({width:60,textAlign:"center",fontSize:20,fontWeight:800})}}/>
+          <button onClick={()=>setVal(v=>Math.min(10,v+1))} style={{...bb,background:Y,border:"2px solid "+BR,borderRadius:12,width:38,height:38,justifyContent:"center",fontSize:20}}>+</button>
+        </div>
+      </div>)}
+      <div style={{background:BG,borderRadius:14,padding:12,textAlign:"center",marginBottom:18,fontSize:14,color:BR}}>총 <b style={{fontSize:20}}>{pendingRows*pendingCols}</b>석 ({pendingRows}행 × {pendingCols}열)</div>
+      <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+        <GBtn onClick={()=>setShowGrid(false)} style={{fontSize:14,padding:"9px 20px"}}>취소</GBtn>
+        <PBtn onClick={applyGrid} style={{fontSize:14,padding:"9px 22px"}}><Ico n="checkCircle" size={15}/> 적용하기</PBtn>
+      </div>
+    </div></div>}
 
-      <div style={{display:"flex",flexDirection:"column",gap:11,width:"100%",maxWidth:380}}>
-        {MODES.map(m=>(
-          <button key={m.id} className="mb" onClick={()=>{setActiveMode(m.id);setScreen("seating");setShowHomeHist(false);}} style={{background:"white",border:"2.5px solid #e8dcc8",borderRadius:22,padding:"14px 18px",display:"flex",alignItems:"center",gap:13,boxShadow:"0 3px 12px rgba(66,54,48,.07)",textAlign:"left",width:"100%",fontFamily:"inherit"}}>
-            <div style={{width:48,height:48,borderRadius:17,background:m.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:25,flexShrink:0,border:"2px solid rgba(66,54,48,.08)"}}>{m.emoji}</div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:800,fontSize:14,color:BR}}>{m.label}</div>
-              <div style={{fontWeight:500,fontSize:11,color:"#9e8e84",marginTop:2}}>{m.desc}</div>
-            </div>
-            <Ico n="chevronRight" size={16} color="#ccc"/>
-          </button>
-        ))}
+    {showUpload&&<div className="mo"><div style={{background:"white",borderRadius:24,padding:24,width:420,maxHeight:"80vh",overflow:"auto",boxShadow:"0 8px 40px rgba(0,0,0,.18)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <b style={{fontSize:17,color:BR}}>👦 학생 명단 업로드</b>
+        <CloseBtn onClick={()=>{setShowUpload(false);setUploadMsg("");setUploadRows([]);setRawText("");}}/>
       </div>
-      <div style={{marginTop:14,fontSize:11,color:"#bbb"}}>
-        학생 {students.length}명 (남 {students.filter(s=>s.gender==="남").length} · 여 {students.filter(s=>s.gender==="여").length}) · 교실 {gridRows}×{gridCols}
+      <div style={{fontSize:13,color:"#888",marginBottom:14,background:BG,borderRadius:12,padding:12,lineHeight:1.9}}>📋 형식: <b>성별 이름</b> (한 줄에 한 명)<br/>예) <code>남 홍길동</code> · <code>여 김영희</code></div>
+      <input ref={fileRef} type="file" accept=".csv,.txt,.tsv" style={{display:"none"}} onChange={handleFile}/>
+      <GBtn onClick={()=>fileRef.current.click()} style={{width:"100%",justifyContent:"center",marginBottom:12,fontSize:14,padding:"9px"}}><Ico n="upload" size={15}/> 파일 선택 (.csv / .txt)</GBtn>
+      <textarea value={rawText} onChange={e=>{setRawText(e.target.value);parseUpload(e.target.value);}} placeholder={"남 홍길동\n여 김영희\n남 이철수"} style={{...iS({height:110,resize:"vertical",marginBottom:12,fontSize:14})}}/>
+      {uploadRows.length>0&&<div style={{marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:700,color:BR,marginBottom:8}}>파싱 결과 ({uploadRows.length}명)</div>
+        <div style={{maxHeight:180,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
+          {uploadRows.map((r,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,background:r.gender==="남"?B_BOY:B_GIRL,borderRadius:10,padding:"6px 12px",border:"1.5px solid #e0d4b8"}}>
+            <select value={r.gender} onChange={e=>{const u=[...uploadRows];u[i]={...u[i],gender:e.target.value};setUploadRows(u);}} style={{fontSize:12,border:"1px solid #ddd",borderRadius:6,padding:"2px 6px",background:"white",cursor:"pointer"}}><option value="남">남</option><option value="여">여</option></select>
+            <span style={{fontSize:14,fontWeight:600,color:BR}}>{r.name}</span>
+            <button onClick={()=>setUploadRows(u=>u.filter((_,j)=>j!==i))} style={{border:"none",background:"none",cursor:"pointer",color:"#ccc",marginLeft:"auto"}}><Ico n="trash" size={13}/></button>
+          </div>)}
+        </div>
+      </div>}
+      {uploadMsg&&<div style={{fontSize:14,fontWeight:600,color:uploadMsg.startsWith("✅")?"#27ae60":"#888",marginBottom:10}}>{uploadMsg}</div>}
+      <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+        <GBtn onClick={()=>{setShowUpload(false);setUploadMsg("");setUploadRows([]);setRawText("");}} style={{fontSize:14,padding:"9px 20px"}}>닫기</GBtn>
+        <PBtn onClick={commitUpload} style={{opacity:uploadRows.length===0?.5:1,fontSize:14,padding:"9px 22px"}}><Ico n="users" size={15}/> {uploadRows.length}명 추가하기</PBtn>
       </div>
+    </div></div>}
+
+    {showHomeHist&&<div className="mo"><div style={{background:"white",borderRadius:22,padding:22,width:340,maxHeight:"68vh",overflow:"auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <b style={{fontSize:15,color:BR}}>📋 저장된 히스토리</b><CloseBtn onClick={()=>setShowHomeHist(false)}/>
+      </div>
+      {homeHist.length===0&&<p style={{color:"#aaa",textAlign:"center",fontSize:13}}>저장된 기록이 없습니다.</p>}
+      {homeHist.map((h,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #eee",borderRadius:14,padding:"11px 12px",marginBottom:8,background:BG}}>
+        <div style={{flex:1,cursor:"pointer"}} onClick={()=>{if(h.seats)setSeats(h.seats);if(h.students)setStudents(h.students);if(h.classInfo)setClassInfo(h.classInfo);setShowHomeHist(false);}}>
+          <div style={{fontWeight:700,fontSize:13}}>{h.date}</div>
+          <div style={{fontSize:12,color:"#888",marginTop:2}}>학생 {h.students?.length||0}명 {h.classInfo?"· "+h.classInfo.grade+"학년 "+h.classInfo.classNum+"반":""}</div>
+        </div>
+        <button onClick={e=>delHomeHI(i,e)} style={{border:"none",background:"none",cursor:"pointer",color:"#ccc",padding:3}}><Ico n="trash" size={15}/></button>
+      </div>)}
+    </div></div>}
+
+    <div style={{textAlign:"center",marginBottom:24}}>
+      <div className="bounce" style={{fontSize:64,marginBottom:10}}>🦁</div>
+      <div style={{fontSize:36,fontWeight:900,color:BR,letterSpacing:-1,lineHeight:1.2,marginBottom:14}}>몽글몽글 짝꿍 찾기</div>
+      {editCls
+        ?<div style={{display:"inline-flex",alignItems:"center",gap:8,background:"white",borderRadius:20,padding:"8px 18px",border:"2px solid "+BR}}>
+          <input value={classInfo.grade} onChange={e=>setClassInfo(p=>({...p,grade:e.target.value}))} style={{width:36,border:"none",borderBottom:"2px solid "+BR,padding:"2px 4px",fontSize:18,fontWeight:800,textAlign:"center",background:"transparent",outline:"none"}} maxLength={2}/>
+          <span style={{fontWeight:700,color:BR,fontSize:16}}>학년</span>
+          <input value={classInfo.classNum} onChange={e=>setClassInfo(p=>({...p,classNum:e.target.value}))} style={{width:36,border:"none",borderBottom:"2px solid "+BR,padding:"2px 4px",fontSize:18,fontWeight:800,textAlign:"center",background:"transparent",outline:"none"}} maxLength={2}/>
+          <span style={{fontWeight:700,color:BR,fontSize:16}}>반</span>
+          <button onClick={()=>setEditCls(false)} style={{border:"none",background:BR,color:Y,borderRadius:10,padding:"4px 14px",fontSize:14,fontWeight:700,cursor:"pointer",marginLeft:4}}>확인</button>
+        </div>
+        :<div onClick={()=>setEditCls(true)} style={{display:"inline-flex",alignItems:"center",gap:8,background:Y,borderRadius:22,padding:"10px 24px",fontWeight:800,fontSize:20,color:BR,cursor:"pointer",border:"2px solid "+BR}}>✏️  {classInfo.grade}학년 {classInfo.classNum}반</div>}
     </div>
-  );
+
+    <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:440,marginBottom:20}}>
+      {MODES.map(m=><button key={m.id} className="mb" onClick={()=>{setActiveMode(m.id);setScreen("seating");setShowHomeHist(false);}} style={{background:"white",border:"2.5px solid #e8dcc8",borderRadius:22,padding:"16px 20px",display:"flex",alignItems:"center",gap:14,boxShadow:"0 3px 12px rgba(66,54,48,.07)",textAlign:"left",width:"100%",fontFamily:"inherit"}}>
+        <div style={{width:52,height:52,borderRadius:18,background:m.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0,border:"2px solid rgba(66,54,48,.08)"}}>{m.emoji}</div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:16,color:BR}}>{m.label}</div>
+          <div style={{fontWeight:500,fontSize:12,color:"#9e8e84",marginTop:2}}>{m.desc}</div>
+        </div>
+        <Ico n="chevronRight" size={18} color="#ccc"/>
+      </button>)}
+    </div>
+
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center",padding:"16px 0 8px",borderTop:"2px solid #f0e8d0",width:"100%",maxWidth:440}}>
+      <button onClick={()=>{setPendingRows(gridRows);setPendingCols(gridCols);setShowGrid(true);}} style={{...bb,background:"white",border:"2px solid #e0d4b8",borderRadius:14,padding:"9px 14px",fontSize:13,color:BR}}><Ico n="settings" size={14}/> {gridRows}×{gridCols} 교실</button>
+      <button onClick={()=>setShowUpload(true)} style={{...bb,background:"white",border:"2px solid #e0d4b8",borderRadius:14,padding:"9px 14px",fontSize:13,color:BR}}><Ico n="upload" size={14}/> 명단 ({students.length}명)</button>
+      <button onClick={()=>setShowHomeHist(true)} style={{...bb,background:"white",border:"2px solid #e0d4b8",borderRadius:14,padding:"9px 14px",fontSize:13,color:BR}}><Ico n="clock" size={14}/> 히스토리</button>
+      <button onClick={exportData} style={{...bb,background:"#e8f5e9",border:"2px solid #81c784",borderRadius:14,padding:"9px 14px",fontSize:13,color:"#2e7d32"}}><Ico n="download" size={14} color="#2e7d32"/> 내보내기</button>
+      <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport}/>
+      <button onClick={()=>importRef.current.click()} style={{...bb,background:"#e3f2fd",border:"2px solid #64b5f6",borderRadius:14,padding:"9px 14px",fontSize:13,color:"#1565c0"}}><Ico n="upload" size={14} color="#1565c0"/> 불러오기</button>
+    </div>
+    <div style={{fontSize:12,color:"#bbb",paddingTop:6}}>학생 {students.length}명 · {gridRows}×{gridCols} ({gridRows*gridCols}석)</div>
+  </div>;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
