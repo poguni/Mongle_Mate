@@ -106,7 +106,6 @@ async function dbSyncStudents(classId,students){
 }
 async function dbSaveHistory(classroomId,mode,seats,students,cols){
   if(!classroomId||classroomId==="undefined")throw new Error("교실 정보가 초기화되지 않았습니다. 잠시 후 다시 시도해 주세요.");
-  // 학생 → DB ID 맵
   const classId=(await sb.from("classrooms").select("class_id").eq("id",classroomId).single()).data?.class_id;
   if(!classId)throw new Error("classId를 찾을 수 없습니다.");
   const nameToDbId=await dbSyncStudents(classId,students);
@@ -116,9 +115,10 @@ async function dbSaveHistory(classroomId,mode,seats,students,cols){
   const assignments=seats.map((s,idx)=>{
     const row=Math.floor(idx/cols),col=idx%cols;
     const st=s.studentId?students.find(x=>x.id===s.studentId):null;
-    const dbStudentId=st?nameToDbId[st.name]||null:null;
-    return{history_id:hist.id,student_id:dbStudentId,seat_row:row,seat_col:col,is_locked:s.locked,has_desk:s.hasDesk};
-  }).filter(a=>a.has_desk);
+    // student_id: 배정된 학생이 있으면 DB UUID, 없으면 null (NOT NULL 제약 해제 필요)
+    const dbStudentId=(st&&nameToDbId[st.name])?nameToDbId[st.name]:null;
+    return{history_id:hist.id,student_id:dbStudentId,seat_row:row,seat_col:col,is_locked:!!s.locked,has_desk:!!s.hasDesk};
+  }).filter(a=>a.has_desk); // hasDesk=false인 칸은 저장 제외
   if(assignments.length>0){const{error:e2}=await sb.from("seat_assignments").insert(assignments);if(e2)throw e2;}
   return hist.id;
 }
@@ -132,15 +132,20 @@ async function dbLoadHistory(histId,students,cols){
   const{data,error}=await sb.from("seat_assignments").select("student_id,seat_row,seat_col,is_locked,has_desk").eq("history_id",histId);
   if(error)throw error;
   if(!data||data.length===0)return null;
-  const maxRow=Math.max(...data.map(r=>r.seat_row)),maxCol=Math.max(...data.map(r=>r.seat_col));
+  const maxRow=Math.max(...data.map(r=>r.seat_row));
+  const maxCol=Math.max(...data.map(r=>r.seat_col));
   const detectedCols=maxCol+1;
   const total=(maxRow+1)*detectedCols;
-  const seats=Array.from({length:total},(_,i)=>({id:i,studentId:null,locked:false,hasDesk:true}));
+  const seats=Array.from({length:total},(_,i)=>({id:i,studentId:null,locked:false,hasDesk:false}));
   data.forEach(r=>{
     const idx=r.seat_row*detectedCols+r.seat_col;
-    if(idx<seats.length){
-      seats[idx].hasDesk=r.has_desk;seats[idx].locked=r.is_locked;
-      if(r.student_id){const st=students.find(s=>s.dbId===r.student_id);if(st)seats[idx].studentId=st.id;}
+    if(idx>=seats.length)return;
+    seats[idx].hasDesk=r.has_desk;
+    seats[idx].locked=r.is_locked;
+    if(r.student_id){
+      // dbId로 먼저 찾고, 없으면 students 배열 전체에서 검색
+      const st=students.find(s=>s.dbId===r.student_id||s.id===r.student_id);
+      if(st)seats[idx].studentId=st.id;
     }
   });
   return seats;
@@ -343,6 +348,16 @@ function SeatingScreen({sectionType,mode,students,setStudents,seats,setSeats,row
 
   useEffect(()=>{if(showHist)loadHists();},[showHist]);
   async function loadHists(){setHistLoading(true);try{const h=await dbLoadHistories(classroomId);setDbHistories(h);}catch(e){showToast("warn","히스토리 로드 실패: "+e.message);}finally{setHistLoading(false);}}
+  async function deleteHist(histId,e){
+    e.stopPropagation();
+    if(!window.confirm("이 히스토리를 삭제할까요?"))return;
+    try{
+      const{error}=await sb.from("seat_histories").delete().eq("id",histId);
+      if(error)throw error;
+      setDbHistories(prev=>prev.filter(h=>h.id!==histId));
+      showToast("success","히스토리를 삭제했습니다.");
+    }catch(e){showToast("warn","삭제 실패: "+e.message);}
+  }
   async function doSave(){
     if(!classroomId){showToast("warn","⏳ 교실 정보 초기화 중입니다. 잠시 후 다시 시도해 주세요.");return;}
     setSaving(true);
@@ -365,9 +380,12 @@ function SeatingScreen({sectionType,mode,students,setStudents,seats,setSeats,row
   return <div style={{background:BG,minHeight:"100vh",color:BR}}>
     {showHist&&<div className="mo"><div style={{background:"white",borderRadius:22,padding:20,width:360,maxHeight:"70vh",overflow:"auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}><b style={{fontSize:15}}>📋 저장된 히스토리</b><CloseBtn onClick={()=>setShowHist(false)}/></div>
-      {histLoading?<div style={{textAlign:"center",padding:20}}><Spinner/></div>:dbHistories.length===0?<p style={{color:"#aaa",textAlign:"center",fontSize:13,padding:16}}>저장된 기록이 없습니다.</p>:dbHistories.map((h,i)=><div key={i} onClick={()=>loadHI(h)} style={{border:"1.5px solid #eee",borderRadius:12,padding:"10px 12px",marginBottom:7,background:BG,cursor:"pointer"}}>
-        <div style={{fontWeight:700,fontSize:12}}>{h.label}</div>
-        <div style={{fontSize:11,color:"#888",marginTop:2}}>방식: {h.mode} · {new Date(h.created_at).toLocaleString("ko-KR")}</div>
+      {histLoading?<div style={{textAlign:"center",padding:20}}><Spinner/></div>:dbHistories.length===0?<p style={{color:"#aaa",textAlign:"center",fontSize:13,padding:16}}>저장된 기록이 없습니다.</p>:dbHistories.map((h,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #eee",borderRadius:12,padding:"10px 12px",marginBottom:7,background:BG}}>
+        <div style={{flex:1,cursor:"pointer",minWidth:0}} onClick={()=>loadHI(h)}>
+          <div style={{fontWeight:700,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.label}</div>
+          <div style={{fontSize:11,color:"#888",marginTop:2}}>방식: {h.mode} · {new Date(h.created_at).toLocaleString("ko-KR")}</div>
+        </div>
+        <button onClick={e=>deleteHist(h.id,e)} title="삭제" style={{border:"none",background:"none",cursor:"pointer",color:"#ccc",padding:"4px",borderRadius:8,flexShrink:0,display:"flex",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.color="#e74c3c"} onMouseLeave={e=>e.currentTarget.style.color="#ccc"}><Ico n="trash" size={15}/></button>
       </div>)}
     </div></div>}
     {showPrint&&<div className="mo" style={{zIndex:2000}}><div style={{background:"white",borderRadius:24,padding:24,width:"min(95vw,820px)",maxHeight:"90vh",overflow:"auto",boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
@@ -530,33 +548,37 @@ function MainMenuScreen({user,classInfo,setClassInfo,onSelect,onLogout}){
         ?<div style={{display:"inline-flex",alignItems:"center",gap:8,background:"white",borderRadius:20,padding:"10px 20px",border:"2px solid "+BR}}><input value={classInfo.grade} onChange={e=>setClassInfo(p=>({...p,grade:e.target.value}))} style={{width:40,border:"none",borderBottom:"2px solid "+BR,padding:"2px 4px",fontSize:20,fontWeight:800,textAlign:"center",background:"transparent",outline:"none"}} maxLength={2}/><span style={{fontWeight:700,color:BR,fontSize:18}}>학년</span><input value={classInfo.classNum} onChange={e=>setClassInfo(p=>({...p,classNum:e.target.value}))} style={{width:40,border:"none",borderBottom:"2px solid "+BR,padding:"2px 4px",fontSize:20,fontWeight:800,textAlign:"center",background:"transparent",outline:"none"}} maxLength={2}/><span style={{fontWeight:700,color:BR,fontSize:18}}>반</span><button onClick={()=>setEditCls(false)} style={{border:"none",background:BR,color:Y,borderRadius:10,padding:"5px 16px",fontSize:14,fontWeight:700,cursor:"pointer",marginLeft:4}}>확인</button></div>
         :<div onClick={()=>setEditCls(true)} style={{display:"inline-flex",alignItems:"center",gap:8,background:Y,borderRadius:24,padding:"12px 28px",fontWeight:800,fontSize:22,color:BR,cursor:"pointer",border:"2px solid "+BR}}>✏️ {classInfo.grade}학년 {classInfo.classNum}반</div>}
     </div>
-    {/* ── 메인 메뉴 버튼 2개: 귀엽고 직관적인 아이콘 ── */}
-    <div style={{display:"flex",gap:20,flexWrap:"wrap",justifyContent:"center",width:"100%",maxWidth:700}}>
-      <button className="mb" onClick={()=>onSelect("row")} style={{flex:"1 1 280px",minHeight:220,background:"white",border:"3px solid #e8dcc8",borderRadius:28,padding:"32px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,boxShadow:"0 4px 20px rgba(66,54,48,.1)",fontFamily:"inherit",cursor:"pointer"}}>
-        {/* 줄로 앉기: 책상이 가로로 줄지어 있는 모습 */}
-        <div style={{fontSize:10,lineHeight:1.3,letterSpacing:2,color:"#9e8e84",marginBottom:2}}>─ ─ ─ ─ ─ ─</div>
-        <div style={{display:"flex",gap:6,marginBottom:2}}>
-          {["🪑","🪑","🪑","🪑"].map((e,i)=><span key={i} style={{fontSize:28}}>{e}</span>)}
+    {/* ── 메인 메뉴 버튼 2개 ── */}
+    <div style={{display:"flex",gap:20,flexWrap:"wrap",justifyContent:"center",width:"100%",maxWidth:740}}>
+      {/* 줄로 앉기: 동물 캐릭터 2행 3열 */}
+      <button className="mb" onClick={()=>onSelect("row")} style={{flex:"1 1 300px",minHeight:240,background:"white",border:"3px solid #e8dcc8",borderRadius:28,padding:"28px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 4px 20px rgba(66,54,48,.1)",fontFamily:"inherit",cursor:"pointer"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:4}}>
+          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+            {["🐯","🐻","🐼"].map((e,i)=><span key={i} style={{fontSize:36,lineHeight:1}}>{e}</span>)}
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+            {["🦊","🐨","🐸"].map((e,i)=><span key={i} style={{fontSize:36,lineHeight:1}}>{e}</span>)}
+          </div>
         </div>
-        <div style={{display:"flex",gap:6,marginBottom:2}}>
-          {["🪑","🪑","🪑","🪑"].map((e,i)=><span key={i} style={{fontSize:28}}>{e}</span>)}
-        </div>
-        <div style={{fontSize:10,lineHeight:1.3,letterSpacing:2,color:"#9e8e84",marginTop:2}}>─ ─ ─ ─ ─ ─</div>
-        <div style={{fontWeight:900,fontSize:24,color:BR,marginTop:6}}>줄로 앉기</div>
+        <div style={{fontWeight:900,fontSize:24,color:BR}}>줄로 앉기</div>
         <div style={{fontSize:13,color:"#9e8e84",fontWeight:500,textAlign:"center",lineHeight:1.6}}>랜덤 · 번호순 · 짝꿍 · 사다리<br/>다양한 방식으로 줄 배치</div>
       </button>
-      <button className="mb" onClick={()=>onSelect("group")} style={{flex:"1 1 280px",minHeight:220,background:"white",border:"3px solid #e8dcc8",borderRadius:28,padding:"32px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,boxShadow:"0 4px 20px rgba(66,54,48,.1)",fontFamily:"inherit",cursor:"pointer"}}>
-        {/* 모둠으로 앉기: 동그랗게 모인 학생들 */}
-        <div style={{position:"relative",width:110,height:90,marginBottom:4}}>
-          <span style={{position:"absolute",top:0,left:24,fontSize:26}}>🧒</span>
-          <span style={{position:"absolute",top:0,right:24,fontSize:26}}>👧</span>
-          <span style={{position:"absolute",bottom:0,left:10,fontSize:26}}>👦</span>
-          <span style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",fontSize:26}}>🧒</span>
-          <span style={{position:"absolute",bottom:0,right:10,fontSize:26}}>👧</span>
-          {/* 가운데 테이블 */}
-          <span style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",fontSize:20}}>🟫</span>
+
+      {/* 모둠으로 앉기: 가운데 큰 책상 + 동물 4마리 */}
+      <button className="mb" onClick={()=>onSelect("group")} style={{flex:"1 1 300px",minHeight:240,background:"white",border:"3px solid #e8dcc8",borderRadius:28,padding:"28px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 4px 20px rgba(66,54,48,.1)",fontFamily:"inherit",cursor:"pointer"}}>
+        <div style={{position:"relative",width:130,height:110,marginBottom:4,flexShrink:0}}>
+          {/* 가운데 책상 */}
+          <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-54%)",width:54,height:40,background:"#d4a96a",borderRadius:10,border:"3px solid #b07d3a",boxShadow:"0 3px 8px rgba(0,0,0,.15)"}}/>
+          {/* 위 */}
+          <span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",fontSize:36,lineHeight:1}}>🦄</span>
+          {/* 아래 */}
+          <span style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",fontSize:36,lineHeight:1}}>🐙</span>
+          {/* 왼쪽 */}
+          <span style={{position:"absolute",top:"50%",left:0,transform:"translateY(-50%)",fontSize:36,lineHeight:1}}>🐬</span>
+          {/* 오른쪽 */}
+          <span style={{position:"absolute",top:"50%",right:0,transform:"translateY(-50%)",fontSize:36,lineHeight:1}}>🦋</span>
         </div>
-        <div style={{fontWeight:900,fontSize:24,color:BR,marginTop:2}}>모둠으로 앉기</div>
+        <div style={{fontWeight:900,fontSize:24,color:BR}}>모둠으로 앉기</div>
         <div style={{fontSize:13,color:"#9e8e84",fontWeight:500,textAlign:"center",lineHeight:1.6}}>선호 친구 · 선생님 지정<br/>모둠 중심 배치</div>
       </button>
     </div>
