@@ -1125,7 +1125,7 @@ function App() {
   );
 }
 
-// ── 앱 마운트 (DOMContentLoaded 보장) ────────────────────
-document.addEventListener("DOMContentLoaded", ()=>{
-  ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-});
+// ── 앱 마운트 ────────────────────────────────────────────
+// Babel standalone은 DOMContentLoaded 이후에 변환·실행되므로
+// 이벤트 리스너 없이 직접 마운트해도 #root 가 이미 존재합니다.
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
