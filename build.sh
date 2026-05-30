@@ -1,33 +1,51 @@
 #!/bin/bash
 # ============================================================
 #  build.sh — Vercel 빌드 스크립트
-#  1) env.js 생성 (환경변수 주입)
-#  2) app.js 내용을 index.html 안에 인라인으로 삽입한
-#     dist/index.html 을 최종 배포 파일로 만든다
+#  sed 대신 Python3 로 app.js 인라인 삽입 (특수문자 안전)
 # ============================================================
-set -e   # 에러 발생 시 즉시 중단
+set -e
 
 # ── 1. dist 폴더 준비 ────────────────────────────────────
 mkdir -p dist
 cp style.css dist/style.css
 
-# ── 2. app.js 내용 읽기 ──────────────────────────────────
-APP_JS=$(cat app.js)
-
-# ── 3. index.html 의 <script type="text/babel" src="app.js">
-#       를 인라인 스크립트 블록으로 교체하여 dist/index.html 생성
-# sed 로 해당 태그 한 줄을 제거하고, </body> 직전에 인라인 삽입 ──
-sed '/<script[^>]*text\/babel[^>]*src="app\.js"[^>]*>/d' index.html \
-  | sed "s|</body>|<script type=\"text/babel\">\n${APP_JS}\n</script>\n</body>|" \
-  > dist/index.html
-
-# ── 4. env.js 는 dist/ 에 생성 (index.html 이 참조) ──────
+# ── 2. env.js 생성 ───────────────────────────────────────
 cat > dist/env.js << EOF
 window.ENV = {
   SUPABASE_URL: "${SUPABASE_URL}",
   SUPABASE_KEY: "${SUPABASE_KEY}"
 };
 EOF
+
+# ── 3. Python3 로 index.html + app.js 합치기 ─────────────
+#   · <script type="text/babel" src="app.js"> 태그 제거
+#   · </body> 직전에 app.js 내용을 인라인으로 삽입
+python3 - << 'PYEOF'
+import re
+
+with open("index.html", "r", encoding="utf-8") as f:
+    html = f.read()
+
+with open("app.js", "r", encoding="utf-8") as f:
+    app_js = f.read()
+
+# src="app.js" 외부 스크립트 태그 제거 (한 줄 또는 여러 줄 형태 모두 대응)
+html = re.sub(
+    r'<script[^>]+type=["\']text/babel["\'][^>]+src=["\']app\.js["\'][^>]*>\s*</script>',
+    '',
+    html,
+    flags=re.IGNORECASE | re.DOTALL
+)
+
+# </body> 직전에 인라인 스크립트 삽입
+inline = f'\n<script type="text/babel">\n{app_js}\n</script>\n'
+html = html.replace("</body>", inline + "</body>")
+
+with open("dist/index.html", "w", encoding="utf-8") as f:
+    f.write(html)
+
+print("✅ dist/index.html generated (app.js inlined)")
+PYEOF
 
 echo "✅ build complete → dist/"
 echo "   - dist/index.html (app.js inlined)"
