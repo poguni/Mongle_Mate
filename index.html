@@ -5,31 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>몽글몽글 짝꿍 찾기</title>
 
-  <!-- 1) 스타일 -->
+  <!-- 스타일 -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- 2) Supabase SDK -->
+  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- 3) React 18 (production) -->
+  <!-- React 18 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 
-  <!-- 4) Babel standalone (JSX 런타임) -->
+  <!-- Babel standalone (JSX 변환) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 
   <!--
-    5) 환경 변수 주입 파일
-       - 로컬 개발: public/env.js 를 직접 수정
-       - Vercel 배포: vercel.json 의 buildCommand 로 자동 생성
-         (아래 vercel.json / build.sh 참고)
+    환경 변수 파일
+    · 로컬: env.js 를 직접 수정 (.gitignore 에 포함)
+    · Vercel: build.sh 가 dist/env.js 를 자동 생성
   -->
   <script src="env.js"></script>
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- 6) 앱 로직 (JSX → Babel 런타임 변환) -->
+  <!--
+    ※ 개발(로컬)용: 아래 외부 src 방식으로 app.js 참조
+       Vercel 빌드 시 build.sh 가 이 태그를 제거하고
+       app.js 내용을 인라인 <script type="text/babel"> 로 삽입합니다.
+  -->
   <script type="text/babel" src="app.js"></script>
 </body>
 </html>
