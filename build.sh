@@ -1,53 +1,59 @@
 #!/bin/bash
 # ============================================================
-#  build.sh — Vercel 빌드 스크립트
-#  sed 대신 Python3 로 app.js 인라인 삽입 (특수문자 안전)
+#  build.sh — 환경변수를 주입한 완성형 단일 HTML을 dist/ 에 생성
 # ============================================================
 set -e
 
-# ── 1. dist 폴더 준비 ────────────────────────────────────
 mkdir -p dist
-cp style.css dist/style.css
 
-# ── 2. env.js 생성 ───────────────────────────────────────
-cat > dist/env.js << EOF
-window.ENV = {
-  SUPABASE_URL: "${SUPABASE_URL}",
-  SUPABASE_KEY: "${SUPABASE_KEY}"
-};
-EOF
+python3 - << PYEOF
+import os, re
 
-# ── 3. Python3 로 index.html + app.js 합치기 ─────────────
-#   · <script type="text/babel" src="app.js"> 태그 제거
-#   · </body> 직전에 app.js 내용을 인라인으로 삽입
-python3 - << 'PYEOF'
-import re
+supabase_url = os.environ.get("SUPABASE_URL", "")
+supabase_key = os.environ.get("SUPABASE_KEY", "")
 
-with open("index.html", "r", encoding="utf-8") as f:
-    html = f.read()
+# style.css 읽기
+with open("style.css", "r", encoding="utf-8") as f:
+    css = f.read()
 
+# app.js 읽기
 with open("app.js", "r", encoding="utf-8") as f:
     app_js = f.read()
 
-# src="app.js" 외부 스크립트 태그 제거 (한 줄 또는 여러 줄 형태 모두 대응)
-html = re.sub(
-    r'<script[^>]+type=["\']text/babel["\'][^>]+src=["\']app\.js["\'][^>]*>\s*</script>',
-    '',
-    html,
-    flags=re.IGNORECASE | re.DOTALL
-)
-
-# </body> 직전에 인라인 스크립트 삽입
-inline = f'\n<script type="text/babel">\n{app_js}\n</script>\n'
-html = html.replace("</body>", inline + "</body>")
+# 최종 HTML 조립
+html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>몽글몽글 짝꿍 찾기</title>
+  <style>
+{css}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script>
+    window.ENV = {{
+      SUPABASE_URL: "{supabase_url}",
+      SUPABASE_KEY: "{supabase_key}"
+    }};
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+{app_js}
+  </script>
+</body>
+</html>"""
 
 with open("dist/index.html", "w", encoding="utf-8") as f:
     f.write(html)
 
-print("✅ dist/index.html generated (app.js inlined)")
+print("✅ dist/index.html built successfully")
+print(f"   SUPABASE_URL: {supabase_url[:30]}...")
 PYEOF
 
-echo "✅ build complete → dist/"
-echo "   - dist/index.html (app.js inlined)"
-echo "   - dist/style.css"
-echo "   - dist/env.js (env vars injected)"
+echo "✅ build complete"
