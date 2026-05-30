@@ -1,0 +1,106 @@
+/* ============================================================
+   몽글몽글 짝꿍 찾기 — 전역 스타일
+   ============================================================ */
+
+/* ── 리셋 & 기본 ─────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background: #FFF9E0;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  outline: none;
+}
+input:focus,
+textarea:focus {
+  box-shadow: 0 0 0 2px #FEE500;
+}
+
+/* ── 스크롤바 ────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb  { background: #e0d4b8; border-radius: 4px; }
+
+/* ── 키프레임 ────────────────────────────────────────────── */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── 유틸 클래스 ─────────────────────────────────────────── */
+.bounce  { animation: bounce 2.2s infinite; }
+.fadeIn  { animation: fadeIn .35s ease; }
+
+/* 카드 호버 */
+.mb {
+  transition: transform .14s, box-shadow .14s;
+  cursor: pointer;
+}
+.mb:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 28px rgba(66, 54, 48, .16) !important;
+}
+
+/* 모달 오버레이 */
+.mo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 좌석 카드 호버 */
+.dh:hover {
+  transform: scale(1.03);
+  transition: transform .12s;
+}
+
+/* 탭 버튼 */
+.tb {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all .12s;
+}
+.tb.a       { background: #FEE500; color: #423630; }
+.tb:not(.a) { color: #999; }
+
+/* 로딩 스피너 */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f0e8d0;
+  border-top-color: #423630;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ── 인쇄 ────────────────────────────────────────────────── */
+@media print {
+  .np              { display: none !important; }
+  body             { background: white !important; }
+}
